@@ -17,6 +17,16 @@ document.addEventListener('DOMContentLoaded', () => {
     currentYearSpan.textContent = new Date().getFullYear();
   }
 
+  // Calculate & auto-update total years of experience dynamically (Start: Feb 2024)
+  const expStartDate = new Date(2024, 1, 1); // February 2024
+  const currentDate = new Date();
+  const diffYears = (currentDate - expStartDate) / (1000 * 60 * 60 * 24 * 365.25);
+  const formattedExpYears = (diffYears > 0 ? diffYears.toFixed(1) : '2.3') + '+';
+
+  document.querySelectorAll('.exp-years-dynamic').forEach(el => {
+    el.textContent = formattedExpYears;
+  });
+
   // ==========================================================================
   // 1. Dark / Light Theme Toggle
   // ==========================================================================
@@ -272,6 +282,17 @@ document.addEventListener('DOMContentLoaded', () => {
   if (contactForm && modalAlert) {
     contactForm.addEventListener('submit', (e) => {
       e.preventDefault(); // Stop standard redirect page refresh
+      
+      const name = document.getElementById('name').value;
+      const email = document.getElementById('email').value;
+      const subject = document.getElementById('subject').value;
+      const message = document.getElementById('message').value;
+      
+      // Construct mailto link to open user's email client
+      const mailtoLink = `mailto:dineshk.plmdev@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(`Name: ${name}\nEmail: ${email}\n\nMessage:\n${message}`)}`;
+      
+      // Open email client
+      window.location.href = mailtoLink;
       
       // Show confirmation modal
       modalAlert.classList.add('show');
