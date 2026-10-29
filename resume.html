@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dinesh K - Resume | PLM & Teamcenter Developer</title>
+  <meta name="description" content="Resume of Dinesh K - Siemens Teamcenter & PLM Developer with hands-on expertise in BMIDE, ITK/SOA, and Active Workspace.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary-color: #1a365d;
+      --secondary-color: #2b6cb0;
+      --accent-color: #0077b6;
+      --text-main: #1f2937;
+      --text-muted: #4b5563;
+      --text-light: #6b7280;
+      --border-color: #e5e7eb;
+      --border-dark: #374151;
+      --bg-page: #f3f4f6;
+      --bg-paper: #ffffff;
+      --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    [data-theme="dark"] {
+      --primary-color: #38bdf8;
+      --secondary-color: #818cf8;
+      --accent-color: #38bdf8;
+      --text-main: #f3f4f6;
+      --text-muted: #d1d5db;
+      --text-light: #9ca3af;
+      --border-color: #374151;
+      --border-dark: #6b7280;
+      --bg-page: #0b0f19;
+      --bg-paper: #111827;
+      --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--bg-page);
+      color: var(--text-main);
+      line-height: 1.5;
+      padding: 2rem 1rem 4rem;
+      min-height: 100vh;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    /* Action Bar (Header Controls) */
+    .action-bar {
+      max-width: 860px;
+      margin: 0 auto 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .action-group {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.6rem 1.2rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      border-radius: 8px;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: 1px solid transparent;
+      font-family: var(--font-sans);
+    }
+
+    .btn-back {
+      background: var(--bg-paper);
+      color: var(--text-main);
+      border-color: var(--border-color);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    .btn-back:hover {
+      background: var(--border-color);
+      transform: translateX(-2px);
+    }
+
+    .btn-download {
+      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
+    }
+
+    .btn-download:hover {
+      background: linear-gradient(135deg, #0369a1 0%, #075985 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(2, 132, 199, 0.4);
+    }
+
+    .btn-print {
+      background: var(--bg-paper);
+      color: var(--text-main);
+      border-color: var(--border-color);
+    }
+
+    .btn-print:hover {
+      background: var(--border-color);
+    }
+
+    .btn-theme {
+      background: var(--bg-paper);
+      color: var(--text-main);
+      border-color: var(--border-color);
+      padding: 0.6rem;
+      border-radius: 8px;
+    }
+
+    /* Resume Paper Container */
+    .resume-container {
+      max-width: 860px;
+      margin: 0 auto;
+      background: var(--bg-paper);
+      box-shadow: var(--shadow);
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+      transition: all 0.3s ease;
+    }
+
+    /* Header Banner */
+    .resume-header {
+      background: #1e3a8a; /* Consistent deep navy banner matching original resume */
+      color: #ffffff;
+      padding: 2.25rem 2.5rem;
+      text-align: center;
+    }
+
+    .header-name {
+      font-size: 2.2rem;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      margin-bottom: 0.35rem;
+      text-transform: uppercase;
+      color: #ffffff;
+    }
+
+    .header-title {
+      font-size: 1.05rem;
+      font-style: italic;
+      color: #93c5fd;
+      margin-bottom: 0.85rem;
+      font-weight: 500;
+    }
+
+    .header-contact {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      font-size: 0.85rem;
+      color: #e0e7ff;
+    }
+
+    .header-contact a {
+      color: #ffffff;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    .header-contact span.sep {
+      opacity: 0.6;
+    }
+
+    /* Resume Body */
+    .resume-body {
+      padding: 2.5rem;
+    }
+
+    /* Section Styling */
+    .resume-section {
+      margin-bottom: 2rem;
+    }
+
+    .resume-section:last-child {
+      margin-bottom: 0;
+    }
+
+    .section-heading {
+      font-size: 1rem;
+      font-weight: 800;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--primary-color);
+      padding-bottom: 0.35rem;
+      border-bottom: 2px solid var(--border-dark);
+      margin-bottom: 1rem;
+    }
+
+    /* Professional Summary */
+    .summary-text {
+      font-size: 0.925rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+      text-align: justify;
+    }
+
+    /* Technical Skills Table / Grid */
+    .skills-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.885rem;
+    }
+
+    .skills-table tr {
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .skills-table tr:last-child {
+      border-bottom: none;
+    }
+
+    .skills-table td {
+      padding: 0.55rem 0.5rem;
+      vertical-align: top;
+    }
+
+    .skills-cat {
+      width: 140px;
+      font-weight: 700;
+      color: var(--text-main);
+      white-space: nowrap;
+    }
+
+    .skills-list {
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* Experience / Jobs */
+    .exp-item {
+      margin-bottom: 1.5rem;
+    }
+
+    .exp-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 0.25rem;
+      flex-wrap: wrap;
+    }
+
+    .exp-role-company {
+      font-size: 0.98rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .exp-date-loc {
+      font-size: 0.85rem;
+      color: var(--text-light);
+      font-style: italic;
+    }
+
+    .exp-progression {
+      font-size: 0.85rem;
+      color: var(--secondary-color);
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    /* Projects */
+    .project-item {
+      margin-bottom: 1.4rem;
+    }
+
+    .project-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .project-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      flex-wrap: wrap;
+      margin-bottom: 0.2rem;
+    }
+
+    .project-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .project-meta {
+      font-size: 0.85rem;
+      color: var(--text-light);
+      font-style: italic;
+    }
+
+    .project-tech {
+      font-size: 0.825rem;
+      font-family: var(--font-mono);
+      color: var(--secondary-color);
+      margin-bottom: 0.4rem;
+      font-weight: 500;
+    }
+
+    /* Bullet Lists */
+    .bullet-list {
+      list-style-type: disc;
+      padding-left: 1.25rem;
+      margin-top: 0.35rem;
+    }
+
+    .bullet-list li {
+      font-size: 0.895rem;
+      color: var(--text-muted);
+      margin-bottom: 0.35rem;
+      line-height: 1.5;
+    }
+
+    .bullet-list li:last-child {
+      margin-bottom: 0;
+    }
+
+    /* Education */
+    .edu-item {
+      margin-bottom: 0.75rem;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    .edu-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .edu-bold {
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    /* Certifications */
+    .cert-list {
+      list-style-type: disc;
+      padding-left: 1.25rem;
+      font-size: 0.895rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    .cert-also {
+      margin-top: 0.5rem;
+      font-size: 0.875rem;
+      color: var(--text-light);
+      font-style: italic;
+    }
+
+    /* Personal Details */
+    .personal-details {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+      font-size: 0.885rem;
+      color: var(--text-muted);
+      margin-bottom: 1.5rem;
+    }
+
+    .personal-item strong {
+      color: var(--text-main);
+    }
+
+    .resume-footer-sig {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 2rem;
+      padding-top: 1rem;
+      border-top: 1px dashed var(--border-color);
+      font-size: 0.85rem;
+      color: var(--text-light);
+    }
+
+    /* Print Styles */
+    @media print {
+      body {
+        background: #ffffff !important;
+        color: #000000 !important;
+        padding: 0 !important;
+      }
+
+      .action-bar {
+        display: none !important;
+      }
+
+      .resume-container {
+        box-shadow: none !important;
+        border: none !important;
+        border-radius: 0 !important;
+        max-width: 100% !important;
+      }
+
+      .resume-header {
+        background: #1e3a8a !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        padding: 1.5rem !important;
+      }
+
+      .resume-body {
+        padding: 1.5rem 1rem !important;
+      }
+
+      .resume-section {
+        page-break-inside: avoid;
+        margin-bottom: 1.25rem !important;
+      }
+
+      .project-item {
+        page-break-inside: avoid;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .resume-body {
+        padding: 1.5rem;
+      }
+      .resume-header {
+        padding: 1.5rem;
+      }
+      .header-name {
+        font-size: 1.75rem;
+      }
+      .skills-table td {
+        display: block;
+        width: 100%;
+        padding: 0.25rem 0;
+      }
+      .skills-cat {
+        padding-top: 0.5rem;
+      }
+      .action-bar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .action-group {
+        justify-content: space-between;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Action Bar -->
+  <div class="action-bar">
+    <a href="index.html" class="btn btn-back">
+      <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none">
+        <line x1="19" y1="12" x2="5" y2="12"></line>
+        <polyline points="12 19 5 12 12 5"></polyline>
+      </svg>
+      Back to Portfolio
+    </a>
+
+    <div class="action-group">
+      <!-- Download PDF Button (Directly downloads the PDF file) -->
+      <a href="assets/Dinesh_K_Resume.pdf" download="Dinesh_K_Resume.pdf" class="btn btn-download" id="download-btn">
+        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.2" fill="none">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+        Download PDF
+      </a>
+
+      <!-- Print Button -->
+      <button onclick="window.print()" class="btn btn-print">
+        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none">
+          <polyline points="6 9 6 2 18 2 18 9"></polyline>
+          <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+          <rect x="6" y="14" width="12" height="8"></rect>
+        </svg>
+        Print
+      </button>
+
+      <!-- Theme Toggle Button -->
+      <button class="btn btn-theme" id="theme-toggle" aria-label="Toggle Theme" title="Toggle Theme">
+        <svg class="sun-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
+          <circle cx="12" cy="12" r="5"></circle>
+          <line x1="12" y1="1" x2="12" y2="3"></line>
+          <line x1="12" y1="21" x2="12" y2="23"></line>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+          <line x1="1" y1="12" x2="3" y2="12"></line>
+          <line x1="21" y1="12" x2="23" y2="12"></line>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+        </svg>
+        <svg class="moon-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Resume Paper -->
+  <main class="resume-container">
+    
+    <!-- Header Banner -->
+    <header class="resume-header">
+      <h1 class="header-name">Dinesh K</h1>
+      <div class="header-title">
+        PLM / Teamcenter Developer — <span class="exp-years-dynamic">2.3+</span> Years Experience
+      </div>
+      <div class="header-contact">
+        <a href="mailto:dineshk.plmdev@gmail.com">dineshk.plmdev@gmail.com</a>
+        <span class="sep">|</span>
+        <span>+91 63853 13244</span>
+        <span class="sep">|</span>
+        <a href="https://linkedin.com/in/dineshk142" target="_blank" rel="noopener">linkedin.com/in/dineshk142</a>
+        <span class="sep">|</span>
+        <span>Chennai, India</span>
+      </div>
+    </header>
+
+    <div class="resume-body">
+      
+      <!-- Professional Summary -->
+      <section class="resume-section">
+        <h2 class="section-heading">Professional Summary</h2>
+        <p class="summary-text">
+          PLM professional with <span class="exp-years-dynamic">2.3+</span> years at TCS specializing in Siemens Teamcenter development, configuration, and administration. Hands-on experience across BMIDE customization, ITK/SOA development, substance compliance, dispatcher upgrades, and workflow automation. Client: Baker Hughes Oil Field Operations LLC.
+        </p>
+      </section>
+
+      <!-- Technical Skills -->
+      <section class="resume-section">
+        <h2 class="section-heading">Technical Skills</h2>
+        <table class="skills-table">
+          <tr>
+            <td class="skills-cat">Core TC</td>
+            <td class="skills-list">Teamcenter 13.x, Active Workspace 5.x, BMIDE, ITK, RAC, SOA, Dispatcher, PLMXML, TCXML Workflow, Classification, Structure Manager, Service Manager, Substance Compliance, IMM Report Builder, CM</td>
+          </tr>
+          <tr>
+            <td class="skills-cat">Integration</td>
+            <td class="skills-list">TC Installation &amp; Upgrade, Deployment Center, TEM, T4EA, TCRA, TC Visualization, EAM, FPH, JT Translator, Jenkins</td>
+          </tr>
+          <tr>
+            <td class="skills-cat">Programming</td>
+            <td class="skills-list">Java, C/C++, Python, Batch Scripting, XML, HTML, SQL, VBA</td>
+          </tr>
+          <tr>
+            <td class="skills-cat">Tools</td>
+            <td class="skills-list">Eclipse, MS Visual Studio, Git/GitHub, MS Power Apps, Mendix, SQL 2017</td>
+          </tr>
+          <tr>
+            <td class="skills-cat">Documentation</td>
+            <td class="skills-list">FSD, TDD &amp; SOW Preparation | Server &amp; Client Deployment Guides | RCA Reports | User Training Guides</td>
+          </tr>
+        </table>
+      </section>
+
+      <!-- Professional Experience -->
+      <section class="resume-section">
+        <h2 class="section-heading">Professional Experience</h2>
+        <div class="exp-item">
+          <div class="exp-header">
+            <span class="exp-role-company">System Engineer — Tata Consultancy Services, Chennai</span>
+            <span class="exp-date-loc">February 2024 – Present</span>
+          </div>
+          <div class="exp-progression">(Trainee → ASE → System Engineer)</div>
+          <ul class="bullet-list">
+            <li>Delivering Teamcenter PLM customization, enhancements, and support for Baker Hughes Oil Field Operations LLC.</li>
+            <li>Progressed from Trainee to System Engineer through consistent technical delivery across 5+ projects.</li>
+            <li>Led the Java Exit dispatcher upgrade project as Team Lead, managing both technical execution and coordination.</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Project Experience -->
+      <section class="resume-section">
+        <h2 class="section-heading">Project Experience</h2>
+
+        <!-- Project 1 -->
+        <article class="project-item">
+          <div class="project-header">
+            <span class="project-title">Substance Compliance</span>
+            <span class="project-meta">Mar 2026 – Present | Teamcenter Developer | Team Member</span>
+          </div>
+          <div class="project-tech">Tech: TC 13.2.4, AW 5.2.4, Substance Compliance, SOA, Stylesheet</div>
+          <ul class="bullet-list">
+            <li>Deployed OOTB compliance check features and developed a custom handler for automatic compliance during release workflows.</li>
+            <li>Configured IMM module — imported materials/substances, set up auto-release with email notifications, and managed Access Manager for RBAC.</li>
+            <li>Implemented MSD import with custom SOA validation and developed template filters for workflow visibility control.</li>
+          </ul>
+        </article>
+
+        <!-- Project 2 -->
+        <article class="project-item">
+          <div class="project-header">
+            <span class="project-title">PALM Enhancement &amp; Bug Fix 2025</span>
+            <span class="project-meta">Dec 2025 – Mar 2026 | Teamcenter Developer | Team Member</span>
+          </div>
+          <div class="project-tech">Tech: TC 13.2.4, AW 5.2.4, RAC, SOA, ITK Customization</div>
+          <ul class="bullet-list">
+            <li>Analyzed and validated requirements for functional enhancements and defect resolutions across two release cycles.</li>
+            <li>Performed RCA for production defects and delivered fixes ensuring system stability and data integrity.</li>
+            <li>Conducted technical reviews and developed enhancements aligned with Teamcenter standards.</li>
+          </ul>
+        </article>
+
+        <!-- Project 3 -->
+        <article class="project-item">
+          <div class="project-header">
+            <span class="project-title">Java Exit — Teamcenter Dispatcher Upgrade</span>
+            <span class="project-meta">Sep 2025 – Dec 2025 | Teamcenter Developer | Team Lead</span>
+          </div>
+          <div class="project-tech">Tech: TC 13.2.4, AW 5.2.4, Dispatcher, Java, JT</div>
+          <ul class="bullet-list">
+            <li>Led migration of Teamcenter Dispatcher from Java JRE 1.8 to Zulu 11; converted plugin JARs into runnable JARs.</li>
+            <li>Installed and configured the upgraded Dispatcher, ensuring compatibility, stability, and improved performance.</li>
+            <li>Directed bug resolution and RCA to ensure long-term reliability of the enterprise PLM dispatcher infrastructure.</li>
+          </ul>
+        </article>
+
+        <!-- Project 4 -->
+        <article class="project-item">
+          <div class="project-header">
+            <span class="project-title">MDR_VDE</span>
+            <span class="project-meta">Jul 2025 – Sep 2025 | Teamcenter Developer | Team Member</span>
+          </div>
+          <div class="project-tech">Tech: TC 13.2.4, AW 5.2.4, BMIDE, SOA, ITK, RAC</div>
+          <ul class="bullet-list">
+            <li>Performed BMIDE configurations — custom properties, LOVs, and extensions; developed custom SOA services integrated with RAC batch utilities.</li>
+            <li>Designed database tables and stored procedures for staging data; implemented ITK customizations and created new workflows.</li>
+          </ul>
+        </article>
+
+        <!-- Project 5 -->
+        <article class="project-item">
+          <div class="project-header">
+            <span class="project-title">PALM Enhancement &amp; Bug Fix 2024</span>
+            <span class="project-meta">Oct 2024 – Jun 2025 | Teamcenter Developer | Team Member</span>
+          </div>
+          <div class="project-tech">Tech: TC 13.2.4, AW 5.2.4, RAC, SOA, ITK Customization</div>
+          <ul class="bullet-list">
+            <li>Analyzed and validated requirements for functional enhancements and defect resolutions across two release cycles.</li>
+            <li>Performed RCA for production defects and delivered fixes ensuring system stability and data integrity.</li>
+            <li>Conducted technical reviews and developed enhancements aligned with Teamcenter standards.</li>
+          </ul>
+        </article>
+      </section>
+
+      <!-- Education -->
+      <section class="resume-section">
+        <h2 class="section-heading">Education</h2>
+        <div class="edu-item">
+          <span class="edu-bold">B. Tech — Information Technology</span> | VSB Engineering College, Karur | 2019 – 2023
+        </div>
+        <div class="edu-item">
+          <span class="edu-bold">HSC</span> — RVS Matric Hr. Sec School, Trichy (2019) &nbsp;|&nbsp; <span class="edu-bold">SSLC</span> — RVS Matric Hr. Sec School, Trichy (2017)
+        </div>
+      </section>
+
+      <!-- Certifications -->
+      <section class="resume-section">
+        <h2 class="section-heading">Certifications</h2>
+        <ul class="cert-list">
+          <li><strong>Teamcenter X Associate Certificate</strong> — Siemens Learning</li>
+          <li><strong>Service Lifecycle Management (SLM) Active Workspace Certificate</strong> — Siemens Learning</li>
+          <li><strong>Mendix Rapid Developer</strong> — Mendix</li>
+          <li><strong>Azure AI Engineer Associate (AI-102)</strong> — Microsoft</li>
+        </ul>
+        <div class="cert-also">
+          Also: Google Cloud Skill Boost, Ethical Hacking (IIT Kharagpur / NIT Trichy), Network Security (Anna University), IoT (ATS)
+        </div>
+      </section>
+
+      <!-- Personal Details -->
+      <section class="resume-section">
+        <h2 class="section-heading">Personal Details</h2>
+        <div class="personal-details">
+          <div class="personal-item"><strong>DOB:</strong> 01 Apr 2002</div>
+          <div class="personal-item"><strong>Nationality:</strong> Indian</div>
+          <div class="personal-item"><strong>Languages:</strong> English, Tamil, Japanese (JLPT N5)</div>
+        </div>
+        <div class="resume-footer-sig">
+          <span>Place: Chennai</span>
+          <span>Dinesh K</span>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <script>
+    // Automatic Experience Year Calculation (Starting Feb 2024)
+    document.addEventListener('DOMContentLoaded', () => {
+      const expStartDate = new Date(2024, 1, 1); // Feb 1, 2024
+      const currentDate = new Date();
+      const diffYears = (currentDate - expStartDate) / (1000 * 60 * 60 * 24 * 365.25);
+      const formattedExpYears = (diffYears > 0 ? diffYears.toFixed(1) : '2.3') + '+';
+
+      document.querySelectorAll('.exp-years-dynamic').forEach(el => {
+        el.textContent = formattedExpYears;
+      });
+
+      // Dark / Light Theme Sync
+      const savedTheme = localStorage.getItem('theme') || 'light';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+      updateThemeIcons(savedTheme);
+
+      const themeToggle = document.getElementById('theme-toggle');
+      if (themeToggle) {
+        themeToggle.addEventListener('click', () => {
+          const currentTheme = document.documentElement.getAttribute('data-theme');
+          const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+          document.documentElement.setAttribute('data-theme', newTheme);
+          localStorage.setItem('theme', newTheme);
+          updateThemeIcons(newTheme);
+        });
+      }
+
+      function updateThemeIcons(theme) {
+        const sun = document.querySelector('.sun-icon');
+        const moon = document.querySelector('.moon-icon');
+        if (sun && moon) {
+          if (theme === 'dark') {
+            sun.style.display = 'block';
+            moon.style.display = 'none';
+          } else {
+            sun.style.display = 'none';
+            moon.style.display = 'block';
+          }
+        }
+      }
+    });
+  </script>
+</body>
+</html>
