@@ -227,6 +227,10 @@
       {
         "name": "User Training Guides",
         "icon": "UG"
+      },
+      {
+        "name": "Troubleshooting Guides",
+        "icon": "TRO"
       }
     ]
   },
