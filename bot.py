@@ -12,6 +12,7 @@ Features:
 import base64
 import json
 import os
+import socket
 import subprocess
 import sys
 import threading
@@ -1081,7 +1082,18 @@ class TelegramBot:
                 print(f"[BOT] Polling error: {e}")
                 time.sleep(2)
 
+def ensure_single_instance(port=58921):
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.bind(("127.0.0.1", port))
+        s.listen(1)
+        return s
+    except OSError:
+        print("[BOT] Another instance of bot.py is already running. Exiting cleanly.")
+        sys.exit(0)
+
 if __name__ == "__main__":
+    lock_socket = ensure_single_instance()
     if not TELEGRAM_BOT_TOKEN:
         print("ERROR: TELEGRAM_BOT_TOKEN is not set in .env")
         sys.exit(1)
