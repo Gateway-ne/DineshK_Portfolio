@@ -197,6 +197,10 @@
       {
         "name": "Soap UI",
         "icon": "SOA"
+      },
+      {
+        "name": "AI Development",
+        "icon": "AI "
       }
     ],
     "documentation": [
