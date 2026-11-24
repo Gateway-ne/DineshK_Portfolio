@@ -214,6 +214,26 @@ def monitor_github_deployment(bot, chat_id, summary_text):
 
         time.sleep(7)
 
+def save_user_id_to_env(user_id):
+    lines = []
+    if env_file.exists():
+        with open(env_file, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+    
+    updated = False
+    new_lines = []
+    for line in lines:
+        if line.startswith("TELEGRAM_ALLOWED_USER_ID="):
+            new_lines.append(f"TELEGRAM_ALLOWED_USER_ID={user_id}\n")
+            updated = True
+        else:
+            new_lines.append(line)
+    if not updated:
+        new_lines.append(f"TELEGRAM_ALLOWED_USER_ID={user_id}\n")
+    
+    with open(env_file, "w", encoding="utf-8") as f:
+        f.writelines(new_lines)
+
 class TelegramBot:
     def __init__(self, token):
         self.token = token
@@ -722,6 +742,13 @@ class TelegramBot:
         data_str = cb.get("data", "")
         chat_id = cb["message"]["chat"]["id"]
         message_id = cb["message"]["message_id"]
+        from_user = cb.get("from", {})
+        user_id = str(from_user.get("id", ""))
+
+        global TELEGRAM_ALLOWED_USER_ID
+        if TELEGRAM_ALLOWED_USER_ID and user_id != TELEGRAM_ALLOWED_USER_ID:
+            self.answer_callback(cb_id, text="⛔ Access Denied: Private Admin Only!")
+            return
 
         if not data_str.startswith("move_skill_"):
             self.answer_callback(cb_id)
@@ -1201,9 +1228,20 @@ class TelegramBot:
         chat_id = message["chat"]["id"]
         from_user = message.get("from", {})
         user_id = str(from_user.get("id", ""))
+        first_name = from_user.get("first_name", "Friend")
 
-        if TELEGRAM_ALLOWED_USER_ID and user_id != TELEGRAM_ALLOWED_USER_ID:
-            self.send_message(chat_id, "⛔ *Access Denied*: You are not authorized to manage this portfolio.")
+        global TELEGRAM_ALLOWED_USER_ID
+        if not TELEGRAM_ALLOWED_USER_ID:
+            TELEGRAM_ALLOWED_USER_ID = user_id
+            save_user_id_to_env(user_id)
+            self.send_message(
+                chat_id,
+                f"🔒 *Admin Access Locked & Secured!*\n\n"
+                f"Hello {first_name}! Your Telegram account (`ID: {user_id}`) is now registered as the **sole authorized admin**.\n\n"
+                f"Nobody else on Telegram can view, access, or modify your portfolio controls."
+            )
+        elif user_id != TELEGRAM_ALLOWED_USER_ID:
+            self.send_message(chat_id, "⛔ *Access Denied*: This is a private portfolio admin bot. You are not authorized.")
             return
 
         # Direct file upload (data.json)
