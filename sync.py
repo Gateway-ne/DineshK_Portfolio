@@ -201,9 +201,9 @@ def generate_resume_summary(data) -> str:
 
 def generate_resume_skills(data) -> str:
     skills = data["skills"]
-    def join_skills(cat_key):
+    def join_skills(cat_key, sep=", "):
         items = skills.get(cat_key, [])
-        return ", ".join([item.get("name") for item in items])
+        return sep.join([item.get("name") for item in items])
 
     return f"""      <div class="skills-grid">
         <div class="skills-label">Core TC</div>
@@ -219,7 +219,7 @@ def generate_resume_skills(data) -> str:
         <div class="skills-value">{join_skills('tools')}</div>
 
         <div class="skills-label">Documentation</div>
-        <div class="skills-value">{join_skills('documentation').replace(', ', ' | ')}</div>
+        <div class="skills-value">{join_skills('documentation', ' | ')}</div>
       </div>"""
 
 def generate_resume_experience(data) -> str:

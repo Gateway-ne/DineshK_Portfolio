@@ -205,16 +205,8 @@
     ],
     "documentation": [
       {
-        "name": "FSD Preparation",
-        "icon": "FS"
-      },
-      {
-        "name": "TDD Writing",
-        "icon": "TD"
-      },
-      {
-        "name": "SOW Preparation",
-        "icon": "SOW"
+        "name": "FSD, TDD & SOW Preparation",
+        "icon": "DOC"
       },
       {
         "name": "Deployment Guides",
