@@ -16,7 +16,7 @@
     "dob": "01 Apr 2002",
     "nationality": "Indian",
     "signaturePlace": "Chennai",
-    "signatureDate": "22/10/2026",
+    "signatureDate": "auto",
     "languages": [
       {
         "name": "English",
@@ -159,6 +159,10 @@
       {
         "name": "HTML/XML",
         "icon": "HT"
+      },
+      {
+        "name": "AI Development",
+        "icon": "AI "
       }
     ],
     "tools": [
@@ -197,10 +201,6 @@
       {
         "name": "Soap UI",
         "icon": "SOA"
-      },
-      {
-        "name": "AI Development",
-        "icon": "AI "
       }
     ],
     "documentation": [

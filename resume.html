@@ -498,10 +498,10 @@
         <div class="skills-value">TC Installation & Upgrade, Deployment Center, TEM, Siemens Sphera CPM & RE, T4EA, JT Translator, Jenkins CI/CD</div>
 
         <div class="skills-label">Programming</div>
-        <div class="skills-value">Java, C/C++, Python, Batch Scripting, SQL Database, Stored Procedures, VBA & VBS, HTML/XML</div>
+        <div class="skills-value">Java, C/C++, Python, Batch Scripting, SQL Database, Stored Procedures, VBA & VBS, HTML/XML, AI Development</div>
 
         <div class="skills-label">Tools</div>
-        <div class="skills-value">Siemens Sphera, Rally, Eclipse IDE, Visual Studio, Git & GitHub, MS Power Apps, Mendix Low Code, SQL Server 2017, Soap UI, AI Development</div>
+        <div class="skills-value">Siemens Sphera, Rally, Eclipse IDE, Visual Studio, Git & GitHub, MS Power Apps, Mendix Low Code, SQL Server 2017, Soap UI</div>
 
         <div class="skills-label">Documentation</div>
         <div class="skills-value">FSD Preparation | TDD Writing | SOW Preparation | Deployment Guides | RCA Reports | User Training Guides</div>
@@ -667,7 +667,7 @@
       <!-- Place, Date, Signature Line -->
       <div class="resume-signature-row">
         <div>Place: Chennai</div>
-        <div>Date: 22/10/2026</div>
+        <div>Date: <span id="resume-signature-date">24/11/2026</span></div>
         <div><strong>Dinesh K</strong></div>
       </div>
 
@@ -699,7 +699,20 @@
       });
     }
 
-    // 2. Generate and download PDF containing the exact updated years
+    // 2. Auto-update signature date to today's date dynamically (DD/MM/YYYY)
+    function updateCurrentDate() {
+      const now = new Date();
+      const dd = String(now.getDate()).padStart(2, '0');
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const yyyy = now.getFullYear();
+      const formattedDate = `${dd}/${mm}/${yyyy}`;
+      const dateEl = document.getElementById('resume-signature-date');
+      if (dateEl) {
+        dateEl.textContent = formattedDate;
+      }
+    }
+
+    // 3. Generate and download PDF containing the exact updated years & current date
     function setupDownloadHandler() {
       const downloadBtn = document.getElementById('download-pdf-btn');
       const btnText = document.getElementById('download-btn-text');
@@ -712,6 +725,10 @@
         btnText.textContent = 'Generating PDF...';
 
         try {
+          // Ensure both experience years and signature date are up-to-date
+          updateExperienceYears();
+          updateCurrentDate();
+
           const element = document.getElementById('resume-document');
 
           // Dynamically compute filename: FirstName_LastName_PLM_exp-year-Yrs_Resume.pdf
@@ -741,6 +758,7 @@
 
     document.addEventListener('DOMContentLoaded', () => {
       updateExperienceYears();
+      updateCurrentDate();
       setupDownloadHandler();
     });
   </script>
