@@ -223,6 +223,10 @@
       {
         "name": "Troubleshooting Guides",
         "icon": "TRO"
+      },
+      {
+        "name": "TestCase Design",
+        "icon": "TES"
       }
     ]
   },
