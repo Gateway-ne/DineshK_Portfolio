@@ -312,6 +312,10 @@ def sync():
         res_content = replace_block(res_content, "RESUME_P2_PROJECTS", generate_resume_projects(data, page_num=2))
         res_content = replace_block(res_content, "RESUME_PERSONAL_PROJECTS", generate_resume_personal_projects(data))
         
+        # Keep pre-rendered date current with today's date
+        today_date_str = datetime.now().strftime("%d/%m/%Y")
+        res_content = re.sub(r'<span id="resume-signature-date">[^<]*</span>', f'<span id="resume-signature-date">{today_date_str}</span>', res_content)
+        
         with open(RESUME_FILE, "w", encoding="utf-8") as f:
             f.write(res_content)
         print(f"  [OK] {RESUME_FILE.name} synchronized.")
