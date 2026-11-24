@@ -21,6 +21,14 @@ class PortfolioRequestHandler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(BASE_DIR), **kwargs)
 
+    def end_headers(self):
+        # Prevent aggressive browser caching of data.json / html during development
+        self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+        self.send_header("Pragma", "no-cache")
+        self.send_header("Expires", "0")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        super().end_headers()
+
     def do_POST(self):
         if self.path == "/api/save":
             content_length = int(self.headers.get("Content-Length", 0))
@@ -56,17 +64,20 @@ class PortfolioRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.send_error(404, "Endpoint not found")
 
 def run_server():
-    socketserver.TCPServer.allow_reuse_address = True
-    with socketserver.TCPServer(("", PORT), PortfolioRequestHandler) as httpd:
-        print(f"[SERVER] Dinesh K Portfolio Server running at http://localhost:{PORT}/")
-        print(f"[SERVER] Portfolio: http://localhost:{PORT}/index.html")
-        print(f"[SERVER] Resume:    http://localhost:{PORT}/resume.html")
-        print(f"[SERVER] Admin UI:  http://localhost:{PORT}/admin.html")
-        try:
-            httpd.serve_forever()
-        except KeyboardInterrupt:
-            print("\n[SERVER] Shutting down...")
-            httpd.server_close()
+    # Use ThreadingHTTPServer so concurrent browser connections / keep-alive do not block the server
+    handler = PortfolioRequestHandler
+    server_address = ("0.0.0.0", PORT)
+    httpd = http.server.ThreadingHTTPServer(server_address, handler)
+    httpd.daemon_threads = True
+    print(f"[SERVER] Dinesh K Portfolio Server running at http://localhost:{PORT}/")
+    print(f"[SERVER] Portfolio: http://localhost:{PORT}/index.html")
+    print(f"[SERVER] Resume:    http://localhost:{PORT}/resume.html")
+    print(f"[SERVER] Admin UI:  http://localhost:{PORT}/admin.html")
+    try:
+        httpd.serve_forever()
+    except KeyboardInterrupt:
+        print("\n[SERVER] Shutting down...")
+        httpd.server_close()
 
 if __name__ == "__main__":
     run_server()
