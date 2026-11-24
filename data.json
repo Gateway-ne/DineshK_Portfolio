@@ -248,11 +248,13 @@
       "period": "Oct 2026 – Present",
       "role": "Teamcenter Developer",
       "teamRole": "Team Member",
-      "techResume": "TC 13.2, AWC 5.2.8, Substance Compliance, Relational Datamart, SQL Stored Procedures",
+      "techResume": "TC 13.2, AWC 5.2.8, Substance Compliance, SOA Services, SoapUI, Relational Datamart, SQL Stored Procedures",
       "techTags": [
         "TC 13.2",
         "AWC 5.2.8",
         "Substance Compliance",
+        "SOA Services",
+        "SoapUI",
         "Datamart Tables",
         "Stored Procedures",
         "SQL Database"
@@ -265,7 +267,8 @@
       "bullets": [
         "Designed and created new Datamart relational database tables and schemas tailored for substance compliance tracking and compliance reporting.",
         "Developed robust database stored procedures and automated batch data transfer routines to extract and load newly generated substance compliance data into the datamart tables.",
-        "Implemented data validation checks and error handling within procedures to guarantee 100% data consistency, transformation accuracy, and seamless synchronization with Teamcenter Substance Compliance modules."
+        "Implemented data validation checks and error handling within procedures to guarantee 100% data consistency, transformation accuracy, and seamless synchronization with Teamcenter Substance Compliance modules.",
+        "Built and validated SOAP/WSDL payloads for Teamcenter Service-Oriented Architecture (SOA) services to automate object deletion workflows, reducing manual data cleanup effort and standardizing test requests in SoapUI."
       ]
     },
     {
