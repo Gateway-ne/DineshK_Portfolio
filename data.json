@@ -119,14 +119,6 @@
         "icon": "T4E"
       },
       {
-        "name": "TCRA",
-        "icon": "RA"
-      },
-      {
-        "name": "TC Visualization",
-        "icon": "VIS"
-      },
-      {
         "name": "JT Translator",
         "icon": "JT"
       },
@@ -201,6 +193,10 @@
       {
         "name": "SQL Server 2017",
         "icon": "DB"
+      },
+      {
+        "name": "Soap UI",
+        "icon": "SOA"
       }
     ],
     "documentation": [
@@ -248,10 +244,10 @@
       "period": "Oct 2026 – Present",
       "role": "Teamcenter Developer",
       "teamRole": "Team Member",
-      "techResume": "TC 13.2.4, AW 5.2.4, Substance Compliance, Relational Datamart, SQL Stored Procedures",
+      "techResume": "TC 13.2, AWC 5.2.8, Substance Compliance, Relational Datamart, SQL Stored Procedures",
       "techTags": [
-        "TC 13.2.4",
-        "AW 5.2.4",
+        "TC 13.2",
+        "AWC 5.2.8",
         "Substance Compliance",
         "Datamart Tables",
         "Stored Procedures",
@@ -274,10 +270,10 @@
       "period": "Mar 2026 – Oct 2026",
       "role": "Teamcenter Developer",
       "teamRole": "Team Member",
-      "techResume": "TC 13.2.4, AW 5.2.4, Substance Compliance, SOA, Stylesheet, Sphera, IMM.",
+      "techResume": "TC 13.2, AWC 5.2.8, Substance Compliance, SOA, Stylesheet, Sphera, IMM.",
       "techTags": [
-        "TC 13.2.4",
-        "AW 5.2.4",
+        "TC 13.2",
+        "AWC 5.2.8",
         "Substance Compliance",
         "Siemens Sphera CPM & RE",
         "SOA Services",
@@ -304,10 +300,10 @@
       "period": "Dec 2025 – Mar 2026",
       "role": "Teamcenter Developer",
       "teamRole": "Team Member",
-      "techResume": "TC 13.2.4, AW 5.2.4, RAC, SOA, ITK Customization",
+      "techResume": "TC 13.2, AWC 5.2.8, RAC, SOA, ITK Customization",
       "techTags": [
-        "TC 13.2.4",
-        "AW 5.2.4",
+        "TC 13.2",
+        "AWC 5.2.8",
         "RAC",
         "SOA",
         "ITK Customization"
@@ -328,10 +324,10 @@
       "period": "Sep 2025 – Dec 2025",
       "role": "Teamcenter Developer",
       "teamRole": "Team Lead",
-      "techResume": "TC 13.2.4, AW 5.2.4, Dispatcher, Java, JT",
+      "techResume": "TC 13.2, AWC 5.2.8, Dispatcher, Java, JT",
       "techTags": [
-        "TC 13.2.4",
-        "AW 5.2.4",
+        "TC 13.2",
+        "AWC 5.2.8",
         "Dispatcher",
         "Java Migration",
         "OpenJDK 11",
@@ -354,10 +350,10 @@
       "period": "Jul 2025 – Sep 2025",
       "role": "Teamcenter Developer",
       "teamRole": "Team Member",
-      "techResume": "TC 13.2.4, AW 5.2.4, BMIDE, SOA, ITK, RAC",
+      "techResume": "TC 13.2, AWC 5.2.8, BMIDE, SOA, ITK, RAC",
       "techTags": [
-        "TC 13.2.4",
-        "AW 5.2.4",
+        "TC 13.2",
+        "AWC 5.2.8",
         "BMIDE",
         "SOA Services",
         "ITK Customization",
@@ -379,10 +375,10 @@
       "period": "Oct 2024 – Jun 2025",
       "role": "Teamcenter Developer",
       "teamRole": "Team Member",
-      "techResume": "TC 13.2.4, AW 5.2.4, RAC, SOA, ITK Customization",
+      "techResume": "TC 13.2, AWC 5.2.8, RAC, SOA, ITK Customization",
       "techTags": [
-        "TC 13.2.4",
-        "AW 5.2.4",
+        "TC 13.2",
+        "AWC 5.2.8",
         "RAC",
         "SOA",
         "ITK Customization"
