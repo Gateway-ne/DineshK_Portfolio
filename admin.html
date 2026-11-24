@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portfolio & Resume Manager | Dinesh K</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0b0f19;
+      --card-bg: rgba(22, 30, 49, 0.75);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --primary: #0ea5e9;
+      --primary-hover: #0284c7;
+      --accent: #10b981;
+      --text: #f3f4f6;
+      --text-muted: #9ca3af;
+      --danger: #ef4444;
+      --radius: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, sans-serif;
+      padding: 24px;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    /* Top Header */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 20px;
+      margin-bottom: 24px;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-badge {
+      background: linear-gradient(135deg, #0ea5e9, #10b981);
+      color: #fff;
+      font-weight: 700;
+      font-size: 14px;
+      padding: 6px 12px;
+      border-radius: 6px;
+    }
+
+    h1 {
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border-radius: var(--radius);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      border: none;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+    .btn-primary:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn-success {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-success:hover {
+      opacity: 0.9;
+    }
+
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--card-border);
+      color: var(--text);
+    }
+    .btn-outline:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .btn-danger {
+      background: var(--danger);
+      color: #fff;
+    }
+
+    .btn-sm {
+      padding: 4px 10px;
+      font-size: 12px;
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+      border-bottom: 1px solid var(--card-border);
+      padding-bottom: 8px;
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 8px 16px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+
+    .tab-btn.active {
+      color: #fff;
+      background: rgba(14, 165, 233, 0.15);
+      color: var(--primary);
+    }
+
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .card-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    /* Forms */
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .form-group {
+      margin-bottom: 14px;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    input, textarea, select {
+      width: 100%;
+      padding: 9px 12px;
+      background: rgba(11, 15, 25, 0.7);
+      border: 1px solid var(--card-border);
+      border-radius: 6px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 14px;
+      outline: none;
+    }
+    input:focus, textarea:focus, select:focus {
+      border-color: var(--primary);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    /* Project Items */
+    .project-item {
+      background: rgba(11, 15, 25, 0.6);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 18px;
+      margin-bottom: 14px;
+      transition: border 0.2s;
+    }
+    .project-item:hover {
+      border-color: rgba(14, 165, 233, 0.4);
+    }
+
+    .project-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+
+    .project-title-text {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .project-meta-tag {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      background: rgba(14, 165, 233, 0.15);
+      color: var(--primary);
+      margin-right: 4px;
+      margin-bottom: 4px;
+    }
+
+    .bullets-preview {
+      margin-top: 10px;
+      padding-left: 20px;
+      font-size: 13px;
+      color: #d1d5db;
+    }
+    .bullets-preview li {
+      margin-bottom: 4px;
+    }
+
+    /* Notification Toast */
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #047857;
+      color: #fff;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-weight: 600;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+      display: none;
+      z-index: 1000;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Header -->
+    <header>
+      <div class="brand">
+        <span class="brand-badge">DK ADMIN</span>
+        <div>
+          <h1>Portfolio & Resume Automation Hub</h1>
+          <p style="font-size: 13px; color: var(--text-muted);">Manage your single source of truth (data.json) — updates both UI and Resume instantly.</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <a href="index.html" target="_blank" class="btn btn-outline btn-sm">👁️ View Portfolio</a>
+        <a href="resume.html" target="_blank" class="btn btn-outline btn-sm">📄 View Resume</a>
+        <button id="save-sync-btn" class="btn btn-success">⚡ Save &amp; Sync Everything</button>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="projects-tab">Projects &amp; Experience</button>
+      <button class="tab-btn" data-tab="skills-tab">Technical Skills</button>
+      <button class="tab-btn" data-tab="personal-projects-tab">Personal Projects</button>
+      <button class="tab-btn" data-tab="profile-tab">Profile &amp; Contact</button>
+      <button class="tab-btn" data-tab="raw-json-tab">Raw data.json</button>
+    </div>
+
+    <!-- TAB 1: Projects -->
+    <div id="projects-tab" class="tab-content active">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Professional Projects</h2>
+            <p style="font-size: 13px; color: var(--text-muted);">Add, edit, or reorder client projects. Synchronizes with both Portfolio Timeline and Resume.</p>
+          </div>
+          <button id="add-project-btn" class="btn btn-primary btn-sm">+ Add New Project</button>
+        </div>
+        <div id="projects-list">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: Skills -->
+    <div id="skills-tab" class="tab-content">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Skills Categories</h2>
+          <p style="font-size: 13px; color: var(--text-muted);">Edit skill tags grouped by category.</p>
+        </div>
+        <div id="skills-categories-container">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: Personal Projects -->
+    <div id="personal-projects-tab" class="tab-content">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Personal Projects &amp; AI Innovations</h2>
+            <p style="font-size: 13px; color: var(--text-muted);">Showcase your web apps, AI tools, and repositories.</p>
+          </div>
+          <button id="add-personal-project-btn" class="btn btn-primary btn-sm">+ Add Personal Project</button>
+        </div>
+        <div id="personal-projects-list">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: Profile & Contact -->
+    <div id="profile-tab" class="tab-content">
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom: 16px;">Biographical &amp; Experience Configuration</h2>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" id="prof-name">
+          </div>
+          <div class="form-group">
+            <label>Professional Title</label>
+            <input type="text" id="prof-title">
+          </div>
+          <div class="form-group">
+            <label>Experience Start Date (YYYY-MM-DD)</label>
+            <input type="date" id="prof-start-date">
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="prof-email">
+          </div>
+          <div class="form-group">
+            <label>Phone Number</label>
+            <input type="text" id="prof-phone">
+          </div>
+          <div class="form-group">
+            <label>LinkedIn URL</label>
+            <input type="text" id="prof-linkedin">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 5: Raw JSON -->
+    <div id="raw-json-tab" class="tab-content">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Direct JSON Editor</h2>
+          <button id="download-json-btn" class="btn btn-outline btn-sm">📥 Download data.json</button>
+        </div>
+        <textarea id="raw-json-editor" style="min-height: 450px; font-family: 'Fira Code', monospace; font-size: 13px;"></textarea>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="toast">Saved &amp; Synchronized!</div>
+
+  <script>
+    let globalData = null;
+
+    // Load data.json on page load
+    async function loadData() {
+      try {
+        const res = await fetch('data.json?t=' + Date.now());
+        globalData = await res.json();
+        renderAll();
+      } catch (e) {
+        console.error('Failed to load data.json:', e);
+        alert('Could not load data.json. Ensure server.py is running!');
+      }
+    }
+
+    function renderAll() {
+      renderProjects();
+      renderSkills();
+      renderPersonalProjects();
+      renderProfile();
+      document.getElementById('raw-json-editor').value = JSON.stringify(globalData, null, 2);
+    }
+
+    // Tab Switching
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(btn.getAttribute('data-tab')).classList.add('active');
+      });
+    });
+
+    // Render Projects
+    function renderProjects() {
+      const container = document.getElementById('projects-list');
+      container.innerHTML = '';
+
+      globalData.projects.forEach((p, idx) => {
+        const item = document.createElement('div');
+        item.className = 'project-item';
+        item.innerHTML = `
+          <div class="project-header-row">
+            <div>
+              <div class="project-title-text">${idx + 1}. ${p.name}</div>
+              <div class="project-meta-tag">${p.period} | ${p.role} (${p.teamRole}) | Resume Page: ${p.page || 1}</div>
+            </div>
+            <div>
+              <button class="btn btn-outline btn-sm" onclick="editProject(${idx})">Edit</button>
+              <button class="btn btn-danger btn-sm" onclick="deleteProject(${idx})">Delete</button>
+            </div>
+          </div>
+          <div style="margin: 8px 0;">
+            ${(p.techTags || []).map(t => `<span class="badge">${t}</span>`).join('')}
+          </div>
+          <ul class="bullets-preview">
+            ${(p.bullets || []).map(b => `<li>${b}</li>`).join('')}
+          </ul>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    // Render Skills
+    function renderSkills() {
+      const container = document.getElementById('skills-categories-container');
+      container.innerHTML = '';
+      
+      const mapping = [
+        { key: 'coreTC', title: 'Core Teamcenter' },
+        { key: 'integration', title: 'Integration & Upgrade' },
+        { key: 'programming', title: 'Programming & Database' },
+        { key: 'tools', title: 'Tools & Platforms' },
+        { key: 'documentation', title: 'Documentation & Guides' }
+      ];
+
+      mapping.forEach(m => {
+        const items = globalData.skills[m.key] || [];
+        const group = document.createElement('div');
+        group.className = 'form-group';
+        group.innerHTML = `
+          <label>${m.title}</label>
+          <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px;">
+            ${items.map((s, sIdx) => `
+              <span class="badge" style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px;">
+                ${s.name}
+                <span style="cursor: pointer; opacity: 0.7;" onclick="removeSkill('${m.key}', ${sIdx})">&times;</span>
+              </span>
+            `).join('')}
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <input type="text" placeholder="Add skill name..." id="new-skill-${m.key}">
+            <button class="btn btn-outline btn-sm" onclick="addSkill('${m.key}')">+ Add</button>
+          </div>
+        `;
+        container.appendChild(group);
+      });
+    }
+
+    function addSkill(categoryKey) {
+      const input = document.getElementById(`new-skill-${categoryKey}`);
+      const val = input.value.trim();
+      if (!val) return;
+      globalData.skills[categoryKey].push({ name: val, icon: val.substring(0, 3).toUpperCase() });
+      input.value = '';
+      renderSkills();
+    }
+
+    function removeSkill(categoryKey, idx) {
+      globalData.skills[categoryKey].splice(idx, 1);
+      renderSkills();
+    }
+
+    // Render Personal Projects
+    function renderPersonalProjects() {
+      const container = document.getElementById('personal-projects-list');
+      container.innerHTML = '';
+      (globalData.personalProjects || []).forEach((p, idx) => {
+        const item = document.createElement('div');
+        item.className = 'project-item';
+        item.innerHTML = `
+          <div class="project-header-row">
+            <div>
+              <div class="project-title-text">${p.title}</div>
+              <div class="project-meta-tag"><a href="${p.url}" target="_blank" style="color: var(--primary);">${p.url}</a> | Status: <span class="badge">${p.status}</span></div>
+            </div>
+            <div>
+              <button class="btn btn-danger btn-sm" onclick="deletePersonalProject(${idx})">Delete</button>
+            </div>
+          </div>
+          <p style="font-size: 13px; color: #d1d5db; margin: 8px 0;">${p.description}</p>
+          <div>
+            ${(p.tech || []).map(t => `<span class="badge">${t}</span>`).join('')}
+          </div>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    function deletePersonalProject(idx) {
+      if (confirm('Delete this personal project?')) {
+        globalData.personalProjects.splice(idx, 1);
+        renderPersonalProjects();
+      }
+    }
+
+    // Render Profile Info
+    function renderProfile() {
+      const p = globalData.personal;
+      document.getElementById('prof-name').value = p.name || '';
+      document.getElementById('prof-title').value = p.title || '';
+      document.getElementById('prof-start-date').value = p.experienceStartDate || '';
+      document.getElementById('prof-email').value = p.email || '';
+      document.getElementById('prof-phone').value = p.phone || '';
+      document.getElementById('prof-linkedin').value = p.linkedin || '';
+    }
+
+    // Save Profile inputs to globalData
+    function updateProfileFromInputs() {
+      const p = globalData.personal;
+      p.name = document.getElementById('prof-name').value;
+      p.title = document.getElementById('prof-title').value;
+      p.experienceStartDate = document.getElementById('prof-start-date').value;
+      p.email = document.getElementById('prof-email').value;
+      p.phone = document.getElementById('prof-phone').value;
+      p.linkedin = document.getElementById('prof-linkedin').value;
+    }
+
+    // Delete Project
+    function deleteProject(idx) {
+      if (confirm(`Delete "${globalData.projects[idx].name}"?`)) {
+        globalData.projects.splice(idx, 1);
+        renderProjects();
+      }
+    }
+
+    // Add New Project
+    document.getElementById('add-project-btn').addEventListener('click', () => {
+      const name = prompt('Enter project name (e.g. Substance Compliance Datamart):');
+      if (!name) return;
+      const period = prompt('Enter project period (e.g. Oct 2026 – Present):', 'Oct 2026 – Present');
+      const bulletsInput = prompt('Enter 1-3 bullet points separated by | (pipe):', 'Designed new tables and schemas|Implemented automated stored procedures for data transfer');
+      const bullets = bulletsInput ? bulletsInput.split('|').map(s => s.trim()).filter(Boolean) : [];
+
+      globalData.projects.unshift({
+        id: name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+        name: name,
+        period: period || 'Present',
+        role: 'Teamcenter Developer',
+        teamRole: 'Team Member',
+        techResume: 'TC 13.2.4, AW 5.2.4',
+        techTags: ['TC 13.2.4', 'AW 5.2.4'],
+        categories: ['customization'],
+        page: 1,
+        bullets: bullets
+      });
+      renderProjects();
+    });
+
+    // Save & Sync button handler
+    document.getElementById('save-sync-btn').addEventListener('click', async () => {
+      updateProfileFromInputs();
+
+      // Check if raw json editor was modified
+      const activeTab = document.querySelector('.tab-btn.active').getAttribute('data-tab');
+      if (activeTab === 'raw-json-tab') {
+        try {
+          globalData = JSON.parse(document.getElementById('raw-json-editor').value);
+        } catch (e) {
+          alert('Invalid JSON syntax: ' + e.message);
+          return;
+        }
+      }
+
+      const btn = document.getElementById('save-sync-btn');
+      btn.textContent = 'Saving...';
+      btn.disabled = true;
+
+      try {
+        const response = await fetch('/api/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(globalData, null, 2)
+        });
+
+        if (response.ok) {
+          showToast('✅ Saved & Synchronized to Portfolio and Resume!');
+          renderAll();
+        } else {
+          // If running static server without /api/save endpoint
+          fallbackSave();
+        }
+      } catch (err) {
+        fallbackSave();
+      } finally {
+        btn.textContent = '⚡ Save & Sync Everything';
+        btn.disabled = false;
+      }
+    });
+
+    function fallbackSave() {
+      // Trigger download of updated data.json
+      const blob = new Blob([JSON.stringify(globalData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'data.json';
+      a.click();
+      URL.revokeObjectURL(url);
+      alert('Downloaded updated data.json! Place it in the repository and run: python sync.py');
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.style.display = 'block';
+      setTimeout(() => { toast.style.display = 'none'; }, 3500);
+    }
+
+    // Init
+    loadData();
+  </script>
+</body>
+</html>

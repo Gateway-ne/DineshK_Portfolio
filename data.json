@@ -1,0 +1,466 @@
+{
+  "personal": {
+    "name": "Dinesh K",
+    "firstName": "Dinesh",
+    "lastName": "K",
+    "title": "PLM / Teamcenter Developer",
+    "experienceStartDate": "2024-02-01",
+    "email": "dineshk.plmdev@gmail.com",
+    "phone": "+91 63853 13244",
+    "linkedin": "https://linkedin.com/in/dineshk142",
+    "linkedinDisplay": "linkedin.com/in/dineshk142",
+    "portfolioUrl": "https://gateway-ne.github.io/DineshK_Portfolio",
+    "portfolioDisplay": "gateway-ne.github.io/DineshK_Portfolio",
+    "location": "Chennai, India",
+    "client": "Baker Hughes Oil Field Operations LLC",
+    "dob": "01 Apr 2002",
+    "nationality": "Indian",
+    "signaturePlace": "Chennai",
+    "signatureDate": "22/10/2026",
+    "languages": [
+      {
+        "name": "English",
+        "flag": "🇬🇧",
+        "level": "Professional working proficiency",
+        "percent": "90%"
+      },
+      {
+        "name": "Tamil",
+        "flag": "🇮🇳",
+        "level": "Native proficiency",
+        "percent": "100%"
+      },
+      {
+        "name": "Japanese",
+        "flag": "🇯🇵",
+        "level": "JLPT N5 (Beginner)",
+        "percent": "35%"
+      }
+    ]
+  },
+  "summary": {
+    "short": "PLM professional with {expYears} at TCS specializing in Siemens Teamcenter development, configuration, and administration. Hands-on experience across BMIDE customization, ITK/SOA development, substance compliance, dispatcher upgrades, and workflow automation. Client: Baker Hughes Oil Field Operations LLC.",
+    "portfolio": [
+      "Highly dedicated PLM Professional with over <strong>{expYears} of experience</strong> at Tata Consultancy Services (TCS), specializing in end-to-end Siemens Teamcenter configuration, customization, and administration.",
+      "Proven hands-on expertise across <strong>BMIDE customization, ITK/SOA development, active workspace configurations, substance compliance</strong>, and automated dispatcher upgrades. I have a track record of driving system efficiency, ensuring structural data integrity, and resolving complex workflow bottlenecks.",
+      "<strong>Primary Client Engagement:</strong> Baker Hughes Oil Field Operations LLC, delivering bespoke PLM solutions to streamline enterprise engineering operations."
+    ]
+  },
+  "skills": {
+    "coreTC": [
+      {
+        "name": "Teamcenter 13.x",
+        "icon": "TC"
+      },
+      {
+        "name": "Active Workspace 5.x",
+        "icon": "AW"
+      },
+      {
+        "name": "BMIDE",
+        "icon": "BM"
+      },
+      {
+        "name": "ITK Customization",
+        "icon": "ITK"
+      },
+      {
+        "name": "RAC Customization",
+        "icon": "RAC"
+      },
+      {
+        "name": "SOA Services",
+        "icon": "SOA"
+      },
+      {
+        "name": "Dispatcher Configuration",
+        "icon": "DP"
+      },
+      {
+        "name": "TCXML Workflows",
+        "icon": "WF"
+      },
+      {
+        "name": "Substance Compliance",
+        "icon": "SC"
+      },
+      {
+        "name": "Datamart & ETL",
+        "icon": "DM"
+      },
+      {
+        "name": "IMM Module",
+        "icon": "IMM"
+      },
+      {
+        "name": "Change Management",
+        "icon": "CM"
+      }
+    ],
+    "integration": [
+      {
+        "name": "TC Installation & Upgrade",
+        "icon": "UP"
+      },
+      {
+        "name": "Deployment Center",
+        "icon": "DC"
+      },
+      {
+        "name": "TEM",
+        "icon": "TEM"
+      },
+      {
+        "name": "Siemens Sphera CPM & RE",
+        "icon": "SPH"
+      },
+      {
+        "name": "T4EA",
+        "icon": "T4E"
+      },
+      {
+        "name": "TCRA",
+        "icon": "RA"
+      },
+      {
+        "name": "TC Visualization",
+        "icon": "VIS"
+      },
+      {
+        "name": "JT Translator",
+        "icon": "JT"
+      },
+      {
+        "name": "Jenkins CI/CD",
+        "icon": "CI"
+      }
+    ],
+    "programming": [
+      {
+        "name": "Java",
+        "icon": "JV"
+      },
+      {
+        "name": "C/C++",
+        "icon": "C"
+      },
+      {
+        "name": "Python",
+        "icon": "PY"
+      },
+      {
+        "name": "Batch Scripting",
+        "icon": "SH"
+      },
+      {
+        "name": "SQL Database",
+        "icon": "SQL"
+      },
+      {
+        "name": "Stored Procedures",
+        "icon": "SP"
+      },
+      {
+        "name": "VBA & VBS",
+        "icon": "VB"
+      },
+      {
+        "name": "HTML/XML",
+        "icon": "HT"
+      }
+    ],
+    "tools": [
+      {
+        "name": "Siemens Sphera",
+        "icon": "SPH"
+      },
+      {
+        "name": "Rally",
+        "icon": "RAL"
+      },
+      {
+        "name": "Eclipse IDE",
+        "icon": "EC"
+      },
+      {
+        "name": "Visual Studio",
+        "icon": "VS"
+      },
+      {
+        "name": "Git & GitHub",
+        "icon": "GT"
+      },
+      {
+        "name": "MS Power Apps",
+        "icon": "PA"
+      },
+      {
+        "name": "Mendix Low Code",
+        "icon": "MX"
+      },
+      {
+        "name": "SQL Server 2017",
+        "icon": "DB"
+      }
+    ],
+    "documentation": [
+      {
+        "name": "FSD Preparation",
+        "icon": "FS"
+      },
+      {
+        "name": "TDD Writing",
+        "icon": "TD"
+      },
+      {
+        "name": "SOW Preparation",
+        "icon": "SOW"
+      },
+      {
+        "name": "Deployment Guides",
+        "icon": "GD"
+      },
+      {
+        "name": "RCA Reports",
+        "icon": "RC"
+      },
+      {
+        "name": "User Training Guides",
+        "icon": "UG"
+      }
+    ]
+  },
+  "experience": {
+    "role": "System Engineer",
+    "company": "Tata Consultancy Services, Chennai",
+    "timeline": "February 2024 – Present (Trainee → ASE → System Engineer)",
+    "bullets": [
+      "Delivering Teamcenter PLM customization, enhancements, and support for Baker Hughes Oil Field Operations LLC.",
+      "Progressed from Trainee to System Engineer through consistent technical delivery across 5+ projects.",
+      "Led the Java Exit dispatcher upgrade project as Team Lead, managing both technical execution and coordination.",
+      "Serving as SPOC for Substance Compliance, driving testing efforts and resolving escalations across business and technical teams."
+    ]
+  },
+  "projects": [
+    {
+      "id": "substance-compliance-datamart",
+      "name": "Substance Compliance Datamart",
+      "period": "Oct 2026 – Present",
+      "role": "Teamcenter Developer",
+      "teamRole": "Team Member",
+      "techResume": "TC 13.2.4, AW 5.2.4, Substance Compliance, Relational Datamart, SQL Stored Procedures",
+      "techTags": [
+        "TC 13.2.4",
+        "AW 5.2.4",
+        "Substance Compliance",
+        "Datamart Tables",
+        "Stored Procedures",
+        "SQL Database"
+      ],
+      "categories": [
+        "customization",
+        "configuration"
+      ],
+      "page": 1,
+      "bullets": [
+        "Designed and created new Datamart relational database tables and schemas tailored for substance compliance tracking and compliance reporting.",
+        "Developed robust database stored procedures and automated batch data transfer routines to extract and load newly generated substance compliance data into the datamart tables.",
+        "Implemented data validation checks and error handling within procedures to guarantee 100% data consistency, transformation accuracy, and seamless synchronization with Teamcenter Substance Compliance modules."
+      ]
+    },
+    {
+      "id": "substance-compliance",
+      "name": "Substance Compliance",
+      "period": "Mar 2026 – Oct 2026",
+      "role": "Teamcenter Developer",
+      "teamRole": "Team Member",
+      "techResume": "TC 13.2.4, AW 5.2.4, Substance Compliance, SOA, Stylesheet, Sphera, IMM.",
+      "techTags": [
+        "TC 13.2.4",
+        "AW 5.2.4",
+        "Substance Compliance",
+        "Siemens Sphera CPM & RE",
+        "SOA Services",
+        "IMM Module",
+        "Python Conversion Utility"
+      ],
+      "categories": [
+        "configuration",
+        "customization"
+      ],
+      "page": 1,
+      "bullets": [
+        "Developed an XML to IPC conversion utility to streamline substance data exchange and standardize compliance reporting formats.",
+        "Implemented MSD IPC import with custom SOA validation and developed template filters for workflow visibility control.",
+        "Created and maintained Regulations, Exemption Lists, and Substance Lists within Sphera to support compliance validation workflows.",
+        "Performed RCA and found that all versions of Siemens CPM – Rule Editor do not generate the .regulation file fully (missing Class A and Class C entries); raised an IR to Siemens and created a custom Python utility to convert Excel data to correct .regulation files.",
+        "Led Unit, SIT, and UAT testing as SPOC, ensuring end-to-end validation and coordinating sign-offs across teams.",
+        "Served as L2 SPOC for Substance Compliance, handling escalations, troubleshooting, and coordination between business and technical teams."
+      ]
+    },
+    {
+      "id": "palm-enhancement-2025",
+      "name": "PALM Enhancement & Bug Fix 2025",
+      "period": "Dec 2025 – Mar 2026",
+      "role": "Teamcenter Developer",
+      "teamRole": "Team Member",
+      "techResume": "TC 13.2.4, AW 5.2.4, RAC, SOA, ITK Customization",
+      "techTags": [
+        "TC 13.2.4",
+        "AW 5.2.4",
+        "RAC",
+        "SOA",
+        "ITK Customization"
+      ],
+      "categories": [
+        "customization"
+      ],
+      "page": 2,
+      "bullets": [
+        "Analyzed and validated requirements for functional enhancements and defect resolutions across two release cycles.",
+        "Performed RCA for production defects and delivered fixes ensuring system stability and data integrity.",
+        "Conducted technical reviews and developed enhancements aligned with Teamcenter standards."
+      ]
+    },
+    {
+      "id": "java-exit",
+      "name": "Java Exit — Teamcenter Dispatcher Java Upgrade",
+      "period": "Sep 2025 – Dec 2025",
+      "role": "Teamcenter Developer",
+      "teamRole": "Team Lead",
+      "techResume": "TC 13.2.4, AW 5.2.4, Dispatcher, Java, JT",
+      "techTags": [
+        "TC 13.2.4",
+        "AW 5.2.4",
+        "Dispatcher",
+        "Java Migration",
+        "OpenJDK 11",
+        "JT Translator"
+      ],
+      "categories": [
+        "configuration",
+        "lead"
+      ],
+      "page": 2,
+      "bullets": [
+        "Led migration of Teamcenter Dispatcher from Java JRE 1.8 to Zulu 11; converted plugin JARs into runnable JARs.",
+        "Installed and configured the upgraded Dispatcher, ensuring compatibility, stability, and improved performance.",
+        "Directed bug resolution and RCA to ensure long-term reliability of the enterprise PLM dispatcher infrastructure."
+      ]
+    },
+    {
+      "id": "mdr-vde",
+      "name": "MDR_VDE",
+      "period": "Jul 2025 – Sep 2025",
+      "role": "Teamcenter Developer",
+      "teamRole": "Team Member",
+      "techResume": "TC 13.2.4, AW 5.2.4, BMIDE, SOA, ITK, RAC",
+      "techTags": [
+        "TC 13.2.4",
+        "AW 5.2.4",
+        "BMIDE",
+        "SOA Services",
+        "ITK Customization",
+        "RAC Batch"
+      ],
+      "categories": [
+        "customization",
+        "configuration"
+      ],
+      "page": 2,
+      "bullets": [
+        "Performed BMIDE configurations — custom properties, LOVs, and extensions; developed custom SOA services integrated with RAC batch utilities.",
+        "Designed database tables and stored procedures for staging data; implemented ITK customizations and created new workflows."
+      ]
+    },
+    {
+      "id": "palm-enhancement-2024",
+      "name": "PALM Enhancement & Bug Fix 2024",
+      "period": "Oct 2024 – Jun 2025",
+      "role": "Teamcenter Developer",
+      "teamRole": "Team Member",
+      "techResume": "TC 13.2.4, AW 5.2.4, RAC, SOA, ITK Customization",
+      "techTags": [
+        "TC 13.2.4",
+        "AW 5.2.4",
+        "RAC",
+        "SOA",
+        "ITK Customization"
+      ],
+      "categories": [
+        "customization"
+      ],
+      "page": 2,
+      "bullets": [
+        "Analyzed and validated requirements for functional enhancements and defect resolutions across two release cycles.",
+        "Performed RCA for production defects and delivered fixes ensuring system stability and data integrity.",
+        "Conducted technical reviews and developed enhancements aligned with Teamcenter standards."
+      ]
+    }
+  ],
+  "personalProjects": [
+    {
+      "id": "nihongo-mozhi",
+      "title": "Nihongo Mozhi – Japanese Learning Web App",
+      "status": "Live",
+      "statusColor": "green",
+      "url": "https://nihongo-mozhi.onrender.com",
+      "buttonText": "Visit Live Web App",
+      "description": "Developed a full-stack JLPT N5/N4 learning platform featuring 50+ structured lessons, kana/kanji charts, flashcards, and quizzes. Integrated an AI-powered study recommender using Scikit-Learn (Logistic Regression) and Pandas/NumPy to model vocabulary forgetting curves, plus an AI conversational speech tutor with voice synthesis and roleplay-based pronunciation practice.",
+      "tech": [
+        "Full-Stack Python",
+        "Scikit-Learn",
+        "Pandas/NumPy",
+        "AI Speech Tutor",
+        "JLPT N5/N4"
+      ]
+    },
+    {
+      "id": "tc-buddy",
+      "title": "TC Buddy — AI Teamcenter ITK Code Generator",
+      "status": "Live",
+      "statusColor": "green",
+      "url": "https://tc-buddy-pi.vercel.app",
+      "buttonText": "Visit Live Web App",
+      "description": "Developed an AI-powered web application to generate Siemens Teamcenter ITK code based on user inputs. Integrated an Ollama-hosted LLM with a Retrieval-Augmented Generation (RAG) pipeline to generate context-aware Teamcenter code.",
+      "tech": [
+        "Teamcenter ITK",
+        "Ollama LLM",
+        "RAG Pipeline",
+        "AI Code Generation",
+        "Vector DB"
+      ]
+    }
+  ],
+  "education": {
+    "degree": "B. Tech — Information Technology",
+    "institution": "VSB Engineering College, Karur",
+    "years": "2019 – 2023",
+    "schooling": "HSC — RVS Matric Hr. Sec School, Trichy (2019) | SSLC — RVS Matric Hr. Sec School, Trichy (2017)"
+  },
+  "certifications": [
+    {
+      "title": "Teamcenter X Associate Certificate",
+      "issuer": "Siemens Learning"
+    },
+    {
+      "title": "Partner - Service Lifecycle Management (SLM) for Active Workspace 6.3",
+      "shortTitle": "Service Lifecycle Management (SLM) Active Workspace Certificate",
+      "issuer": "Siemens Learning"
+    },
+    {
+      "title": "Mendix Rapid Developer",
+      "issuer": "Mendix"
+    },
+    {
+      "title": "Azure AI Engineer Associate (AI-102)",
+      "issuer": "Microsoft"
+    }
+  ],
+  "additionalCertifications": [
+    "Google Cloud Skill Boost",
+    "Ethical Hacking (IIT Kharagpur / NIT Trichy)",
+    "Network Security (Anna University)",
+    "IoT (ATS)"
+  ]
+}
