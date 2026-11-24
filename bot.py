@@ -374,7 +374,7 @@ class TelegramBot:
         text = (
             f"⚡ *Dinesh K — Portfolio Admin Dashboard*\n\n"
             f"👤 *{p.get('name', 'Dinesh K')}* | {p.get('title', '')}\n"
-            f"📅 *Experience:* `{p.get('experienceStartDate', '')}` (*{exp_calc}*)\n"
+            f"📅 *Experience:* *{exp_calc}*\n"
             f"📁 *Experience Projects:* {len(data.get('projects', []))} | *Personal Projects:* {len(data.get('personalProjects', []))}\n"
             f"{pending_str}\n\n"
             f"Tap any button below to manage your portfolio:"
@@ -416,7 +416,7 @@ class TelegramBot:
             f"👤 *Profile & Bio Details*\n\n"
             f"• *Name:* {p.get('name', '')}\n"
             f"• *Title:* {p.get('title', '')}\n"
-            f"• *Exp Start Date:* `{p.get('experienceStartDate', '')}` (*{exp_calc}*)\n"
+            f"• *Experience:* *{exp_calc}*\n"
             f"• *Email:* {p.get('email', '')}\n"
             f"• *Phone:* {p.get('phone', '')}\n"
             f"• *LinkedIn:* {p.get('linkedin', '')}\n"
@@ -428,7 +428,7 @@ class TelegramBot:
         keyboard = {
             "inline_keyboard": [
                 [
-                    {"text": "✏️ Exp Date", "callback_data": "edit_prof_exp"},
+                    {"text": "✏️ Experience", "callback_data": "edit_prof_exp"},
                     {"text": "✏️ Job Title", "callback_data": "edit_prof_title"}
                 ],
                 [
@@ -1301,7 +1301,7 @@ class TelegramBot:
                 chat_id,
                 f"📊 *Portfolio Status:*\n\n"
                 f"👤 *{p.get('name')}* — {p.get('title')}\n"
-                f"📅 Experience: `{p.get('experienceStartDate')}` (*{calc}*)\n"
+                f"📅 Experience: *{calc}*\n"
                 f"📁 Projects: {len(d.get('projects', []))} | Personal: {len(d.get('personalProjects', []))}"
                 f"{p_text}\n\n"
                 f"🌐 https://gateway-ne.github.io/DineshK_Portfolio/"
