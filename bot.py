@@ -747,7 +747,7 @@ class TelegramBot:
 
         # Strict authorization: Only @DineshK142
         if username != "dineshk142":
-            self.answer_callback(cb_id, text="⛔ Access Denied: Only @DineshK142 is authorized!")
+            self.answer_callback(cb_id, text="⛔ Access Denied: This is a private admin bot.")
             return
 
         if not data_str.startswith("move_skill_"):
@@ -1235,8 +1235,8 @@ class TelegramBot:
             print(f"[SECURITY BLOCKED] Stranger: @{from_user.get('username')} (ID: {from_user.get('id')})")
             self.send_message(
                 chat_id,
-                "⛔ *Access Denied*: This is a private admin bot.\n\n"
-                "Only @DineshK142 is authorized to use this bot."
+                "⛔ *Access Denied*: This is a private admin bot.",
+                {"remove_keyboard": True}
             )
             return
 
