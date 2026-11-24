@@ -685,12 +685,12 @@
         try {
           const element = document.getElementById('resume-document');
 
-          // Dynamically compute filename: FirstName_LastName_PLM_exp-year_Resume.pdf
+          // Dynamically compute filename: FirstName_LastName_PLM_exp-year-Yrs_Resume.pdf
           const expStartDate = new Date(2024, 1, 1);
           const currentDate = new Date();
           const diffYears = (currentDate - expStartDate) / (1000 * 60 * 60 * 24 * 365.25);
           const expYearsNum = (diffYears > 0 ? diffYears.toFixed(1) : '2.3');
-          const dynamicFilename = `Dinesh_K_PLM_${expYearsNum}_Resume.pdf`;
+          const dynamicFilename = `Dinesh_K_PLM_${expYearsNum}-Yrs_Resume.pdf`;
 
           const opt = {
             margin:       [6, 6, 6, 6],
