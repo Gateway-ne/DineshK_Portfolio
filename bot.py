@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
 """
-bot.py - Telegram Bot for Dinesh K's Portfolio & Resume Automation
+bot.py - Button-Driven Telegram Admin Bot for Dinesh K's Portfolio & Resume
 
-Allows you to update portfolio data, upload data.json, check live status,
-and trigger syncs directly from Telegram on your phone.
+Every single option from admin.html is available as a touch button:
+- Persistent Bottom Keyboard (always docked at the bottom of the chat)
+- Interactive Inline Buttons for every category, project, skill, and profile field
+- Instant 1-tap toggles (Live/Dev, Page 1/2)
+- Built-in [❌ Cancel] buttons on all prompts
 """
 
 import base64
 import json
 import os
+import subprocess
 import sys
 import time
 from datetime import datetime
@@ -17,7 +21,7 @@ import requests
 
 BASE_DIR = Path(__file__).resolve().parent
 
-# Load .env if present
+# Load .env
 env_file = BASE_DIR / ".env"
 if env_file.exists():
     with open(env_file, "r", encoding="utf-8") as f:
@@ -33,6 +37,32 @@ GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "").strip()
 GITHUB_REPO = os.environ.get("GITHUB_REPO", "Gateway-ne/DineshK_Portfolio").strip()
 
 DATA_PATH = BASE_DIR / "data.json"
+
+GIT_CANDIDATES = [
+    r"C:\Users\MSI\AppData\Local\GitHubDesktop\app-3.6.5\resources\app\git\cmd\git.exe",
+    r"C:\Program Files\Git\cmd\git.exe",
+    "git"
+]
+
+def get_git_executable():
+    for g in GIT_CANDIDATES:
+        if os.path.exists(g):
+            return g
+    return "git"
+
+user_states = {}
+
+# Persistent Bottom Keyboard (Always visible on phone screen)
+DASHBOARD_REPLY_KEYBOARD = {
+    "keyboard": [
+        [{"text": "👤 Profile & Bio"}, {"text": "🛠️ Skills Manager"}],
+        [{"text": "💼 Experience Projects"}, {"text": "🚀 Personal Projects"}],
+        [{"text": "📄 Download data.json"}, {"text": "⚡ Force Re-Sync"}],
+        [{"text": "📊 Live Status"}, {"text": "📋 Main Dashboard"}]
+    ],
+    "resize_keyboard": True,
+    "is_persistent": True
+}
 
 def calculate_experience(start_date_str):
     try:
@@ -52,34 +82,50 @@ def load_data():
     with open(DATA_PATH, "r", encoding="utf-8") as f:
         return json.load(f)
 
-def save_and_sync(data):
-    # 1. Save locally
+def save_and_sync(data, commit_msg="Auto-update portfolio via Telegram Bot"):
+    # 1. Save data.json locally
     with open(DATA_PATH, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
     
-    # 2. Run sync.py
+    # 2. Re-compile index.html and resume.html
     import sync
     sync.sync()
 
-    # 3. If GITHUB_TOKEN is available, commit to GitHub directly
-    if GITHUB_TOKEN:
-        push_to_github(data)
+    # 3. Commit locally and push to GitHub using GITHUB_TOKEN
+    pushed = False
+    try:
+        git_cmd = get_git_executable()
+        subprocess.run([git_cmd, "add", "data.json", "index.html", "resume.html"], cwd=str(BASE_DIR), capture_output=True, text=True)
+        subprocess.run([git_cmd, "commit", "-m", commit_msg], cwd=str(BASE_DIR), capture_output=True, text=True)
+        
+        if GITHUB_TOKEN:
+            remote_url = f"https://{GITHUB_TOKEN}@github.com/{GITHUB_REPO}.git"
+            push_res = subprocess.run([git_cmd, "push", remote_url, "main"], cwd=str(BASE_DIR), capture_output=True, text=True, timeout=25)
+            if push_res.returncode == 0:
+                print(f"[BOT] Pushed successfully to GitHub: {commit_msg}")
+                pushed = True
+            else:
+                print(f"[BOT] Git push note: {push_res.stderr}")
+    except Exception as e:
+        print(f"[BOT] Local git commit/push note: {e}")
 
-def push_to_github(data):
-    """Pushes data.json to GitHub using REST API so GitHub Actions triggers auto-sync."""
+    # 4. If git push didn't succeed, fallback to GitHub REST API
+    if GITHUB_TOKEN and not pushed:
+        push_to_github(data, commit_msg)
+
+def push_to_github(data, commit_msg):
     try:
         url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/data.json"
         headers = {
             "Authorization": f"Bearer {GITHUB_TOKEN}",
             "Accept": "application/vnd.github+json"
         }
-        # Get existing file SHA
         r = requests.get(url, headers=headers, timeout=10)
         sha = r.json().get("sha") if r.status_code == 200 else None
 
         content_bytes = json.dumps(data, indent=2, ensure_ascii=False).encode("utf-8")
         payload = {
-            "message": "Update data.json via Telegram Bot [skip ci]",
+            "message": f"{commit_msg} [skip ci]",
             "content": base64.b64encode(content_bytes).decode("utf-8")
         }
         if sha:
@@ -87,11 +133,11 @@ def push_to_github(data):
 
         put_res = requests.put(url, headers=headers, json=payload, timeout=15)
         if put_res.status_code in (200, 201):
-            print("[BOT] Successfully committed data.json to GitHub repository!")
+            print("[BOT] Successfully committed to GitHub via REST API!")
         else:
             print(f"[BOT] GitHub API warning ({put_res.status_code}): {put_res.text}")
     except Exception as e:
-        print(f"[BOT] GitHub commit error: {e}")
+        print(f"[BOT] GitHub API error: {e}")
 
 class TelegramBot:
     def __init__(self, token):
@@ -100,8 +146,25 @@ class TelegramBot:
         self.offset = 0
 
     def send_message(self, chat_id, text, reply_markup=None):
+        markup = reply_markup if reply_markup else DASHBOARD_REPLY_KEYBOARD
         payload = {
             "chat_id": chat_id,
+            "text": text,
+            "parse_mode": "Markdown",
+            "disable_web_page_preview": True,
+            "reply_markup": json.dumps(markup)
+        }
+        try:
+            r = requests.post(f"{self.api_url}/sendMessage", json=payload, timeout=10)
+            return r.json()
+        except Exception as e:
+            print(f"[BOT] Send error: {e}")
+            return None
+
+    def edit_message(self, chat_id, message_id, text, reply_markup=None):
+        payload = {
+            "chat_id": chat_id,
+            "message_id": message_id,
             "text": text,
             "parse_mode": "Markdown",
             "disable_web_page_preview": True
@@ -109,16 +172,29 @@ class TelegramBot:
         if reply_markup:
             payload["reply_markup"] = json.dumps(reply_markup)
         try:
-            requests.post(f"{self.api_url}/sendMessage", json=payload, timeout=10)
+            requests.post(f"{self.api_url}/editMessageText", json=payload, timeout=10)
         except Exception as e:
-            print(f"[BOT] Send error: {e}")
+            print(f"[BOT] Edit error: {e}")
+
+    def answer_callback(self, callback_query_id, text=None):
+        payload = {"callback_query_id": callback_query_id}
+        if text:
+            payload["text"] = text
+        try:
+            requests.post(f"{self.api_url}/answerCallbackQuery", json=payload, timeout=10)
+        except Exception as e:
+            pass
 
     def send_document(self, chat_id, file_path, caption=""):
         try:
             with open(file_path, "rb") as f:
                 requests.post(
                     f"{self.api_url}/sendDocument",
-                    data={"chat_id": chat_id, "caption": caption},
+                    data={
+                        "chat_id": chat_id,
+                        "caption": caption,
+                        "reply_markup": json.dumps(DASHBOARD_REPLY_KEYBOARD)
+                    },
                     files={"document": f},
                     timeout=20
                 )
@@ -142,7 +218,725 @@ class TelegramBot:
             print(f"[BOT] Download error: {e}")
         return False
 
+    # =========================================================================
+    # Button Menus
+    # =========================================================================
+
+    def show_main_menu(self, chat_id, message_id=None):
+        data = load_data()
+        p = data.get("personal", {})
+        exp_calc = calculate_experience(p.get("experienceStartDate", ""))
+        
+        text = (
+            f"⚡ *Dinesh K — Portfolio Admin Dashboard*\n\n"
+            f"👤 *{p.get('name', 'Dinesh K')}* | {p.get('title', '')}\n"
+            f"📅 *Experience:* `{p.get('experienceStartDate', '')}` (*{exp_calc}*)\n"
+            f"📁 *Experience Projects:* {len(data.get('projects', []))} | *Personal Projects:* {len(data.get('personalProjects', []))}\n\n"
+            f"Tap any button below to manage your portfolio:"
+        )
+
+        keyboard = {
+            "inline_keyboard": [
+                [
+                    {"text": "👤 Profile & Bio", "callback_data": "menu_profile"},
+                    {"text": "🛠️ Skills Manager", "callback_data": "menu_skills"}
+                ],
+                [
+                    {"text": "💼 Experience Projects", "callback_data": "menu_projects"},
+                    {"text": "🚀 Personal Projects", "callback_data": "menu_personal"}
+                ],
+                [
+                    {"text": "📄 Download data.json", "callback_data": "action_get_data"},
+                    {"text": "⚡ Force Re-Sync", "callback_data": "action_resync"}
+                ]
+            ]
+        }
+
+        if message_id:
+            self.edit_message(chat_id, message_id, text, keyboard)
+        else:
+            self.send_message(chat_id, text, keyboard)
+
+    # 1. Profile & Bio Menu
+    def show_profile_menu(self, chat_id, message_id=None):
+        data = load_data()
+        p = data.get("personal", {})
+        exp_calc = calculate_experience(p.get("experienceStartDate", ""))
+
+        text = (
+            f"👤 *Profile & Bio Details*\n\n"
+            f"• *Name:* {p.get('name', '')}\n"
+            f"• *Title:* {p.get('title', '')}\n"
+            f"• *Exp Start Date:* `{p.get('experienceStartDate', '')}` (*{exp_calc}*)\n"
+            f"• *Email:* {p.get('email', '')}\n"
+            f"• *Phone:* {p.get('phone', '')}\n"
+            f"• *LinkedIn:* {p.get('linkedin', '')}\n"
+            f"• *Location:* {p.get('location', '')}\n"
+            f"• *Client:* {p.get('client', '')}\n\n"
+            f"Tap any field button below to edit:"
+        )
+
+        keyboard = {
+            "inline_keyboard": [
+                [
+                    {"text": "✏️ Exp Date", "callback_data": "edit_prof_exp"},
+                    {"text": "✏️ Job Title", "callback_data": "edit_prof_title"}
+                ],
+                [
+                    {"text": "✏️ Full Name", "callback_data": "edit_prof_name"},
+                    {"text": "✏️ Phone Number", "callback_data": "edit_prof_phone"}
+                ],
+                [
+                    {"text": "✏️ Email", "callback_data": "edit_prof_email"},
+                    {"text": "✏️ LinkedIn URL", "callback_data": "edit_prof_linkedin"}
+                ],
+                [
+                    {"text": "✏️ Location", "callback_data": "edit_prof_location"},
+                    {"text": "✏️ Client Name", "callback_data": "edit_prof_client"}
+                ],
+                [
+                    {"text": "⬅️ Back to Dashboard", "callback_data": "menu_main"}
+                ]
+            ]
+        }
+
+        if message_id:
+            self.edit_message(chat_id, message_id, text, keyboard)
+        else:
+            self.send_message(chat_id, text, keyboard)
+
+    # 2. Skills Menu
+    def show_skills_menu(self, chat_id, message_id=None):
+        data = load_data()
+        skills = data.get("skills", {})
+
+        cat_names = [
+            ("coreTC", "Core Teamcenter"),
+            ("integration", "Integration & Upgrade"),
+            ("programming", "Programming & Database"),
+            ("tools", "Tools & Platforms"),
+            ("documentation", "Documentation & Guides")
+        ]
+
+        text = "🛠️ *Skills Manager*\n\nSelect a skill category button below:\n"
+        buttons = []
+        for key, title in cat_names:
+            count = len(skills.get(key, []))
+            buttons.append([{"text": f"📂 {title} ({count})", "callback_data": f"view_skills_{key}"}])
+
+        buttons.append([{"text": "⬅️ Back to Dashboard", "callback_data": "menu_main"}])
+
+        keyboard = {"inline_keyboard": buttons}
+        if message_id:
+            self.edit_message(chat_id, message_id, text, keyboard)
+        else:
+            self.send_message(chat_id, text, keyboard)
+
+    def show_skills_category(self, chat_id, cat_key, message_id=None):
+        data = load_data()
+        skills = data.get("skills", {}).get(cat_key, [])
+        cat_titles = {
+            "coreTC": "Core Teamcenter",
+            "integration": "Integration & Upgrade",
+            "programming": "Programming & Database",
+            "tools": "Tools & Platforms",
+            "documentation": "Documentation & Guides"
+        }
+        title = cat_titles.get(cat_key, cat_key)
+
+        text = f"🛠️ *Skills in {title}* ({len(skills)} items)\n\n"
+        if not skills:
+            text += "_No skills added in this category yet._\n"
+        else:
+            for idx, s in enumerate(skills):
+                text += f"`{idx + 1}.` {s.get('name', '')}\n"
+
+        buttons = [
+            [{"text": f"➕ Add New Skill", "callback_data": f"add_skill_{cat_key}"}]
+        ]
+        
+        # Add 1-click delete buttons for every skill
+        del_row = []
+        for idx, s in enumerate(skills):
+            del_row.append({"text": f"❌ {s.get('name', '')[:14]}", "callback_data": f"del_skill_{cat_key}_{idx}"})
+            if len(del_row) == 2:
+                buttons.append(del_row)
+                del_row = []
+        if del_row:
+            buttons.append(del_row)
+
+        buttons.append([{"text": "⬅️ Back to Skills", "callback_data": "menu_skills"}])
+        keyboard = {"inline_keyboard": buttons}
+
+        if message_id:
+            self.edit_message(chat_id, message_id, text, keyboard)
+        else:
+            self.send_message(chat_id, text, keyboard)
+
+    # 3. Experience Projects Menu
+    def show_projects_menu(self, chat_id, message_id=None):
+        data = load_data()
+        projects = data.get("projects", [])
+
+        text = f"💼 *Professional Projects* ({len(projects)} total)\n\nTap any project button below to view or edit:\n"
+        buttons = []
+        for idx, p in enumerate(projects):
+            name = p.get("name", "Untitled")
+            period = p.get("period", "")
+            btn_text = f"📁 {idx + 1}. {name[:22]} ({period})"
+            buttons.append([{"text": btn_text, "callback_data": f"view_proj_{idx}"}])
+
+        buttons.append([{"text": "➕ Add New Project", "callback_data": "action_add_project"}])
+        buttons.append([{"text": "⬅️ Back to Dashboard", "callback_data": "menu_main"}])
+
+        keyboard = {"inline_keyboard": buttons}
+        if message_id:
+            self.edit_message(chat_id, message_id, text, keyboard)
+        else:
+            self.send_message(chat_id, text, keyboard)
+
+    def show_project_detail(self, chat_id, idx, message_id=None):
+        data = load_data()
+        projects = data.get("projects", [])
+        if idx >= len(projects):
+            self.show_projects_menu(chat_id, message_id)
+            return
+
+        p = projects[idx]
+        bullets = p.get("bullets", [])
+        bullet_text = "\n".join([f"• {b}" for b in bullets[:4]])
+        if len(bullets) > 4:
+            bullet_text += f"\n_...and {len(bullets) - 4} more bullets._"
+
+        text = (
+            f"💼 *Project #{idx + 1}: {p.get('name', '')}*\n\n"
+            f"• *Period:* {p.get('period', '')}\n"
+            f"• *Role:* {p.get('role', '')} ({p.get('teamRole', 'Team Member')})\n"
+            f"• *Tech Tags:* {', '.join(p.get('techTags', []))}\n"
+            f"• *Resume Page:* {p.get('page', 1)}\n\n"
+            f"*Key Achievements / Bullets:*\n{bullet_text}\n"
+        )
+
+        cur_page = p.get("page", 1)
+        next_page = 2 if cur_page == 1 else 1
+
+        keyboard = {
+            "inline_keyboard": [
+                [
+                    {"text": "✏️ Name", "callback_data": f"edit_proj_name_{idx}"},
+                    {"text": "✏️ Period", "callback_data": f"edit_proj_period_{idx}"}
+                ],
+                [
+                    {"text": "✏️ Role", "callback_data": f"edit_proj_role_{idx}"},
+                    {"text": "✏️ Tech Tags", "callback_data": f"edit_proj_tech_{idx}"}
+                ],
+                [
+                    {"text": f"📄 Switch to Page {next_page}", "callback_data": f"toggle_proj_page_{idx}_{next_page}"},
+                    {"text": "📝 Replace Bullets", "callback_data": f"edit_proj_bullets_{idx}"}
+                ],
+                [
+                    {"text": "🗑️ Delete Project", "callback_data": f"del_proj_confirm_{idx}"}
+                ],
+                [
+                    {"text": "⬅️ Back to Projects", "callback_data": "menu_projects"}
+                ]
+            ]
+        }
+
+        if message_id:
+            self.edit_message(chat_id, message_id, text, keyboard)
+        else:
+            self.send_message(chat_id, text, keyboard)
+
+    # 4. Personal Projects Menu
+    def show_personal_menu(self, chat_id, message_id=None):
+        data = load_data()
+        personal = data.get("personalProjects", [])
+
+        text = f"🚀 *Personal Projects* ({len(personal)} total)\n\nTap a project button below to view or edit:\n"
+        buttons = []
+        for idx, p in enumerate(personal):
+            status_icon = "🟢" if p.get("status", "").lower() == "live" else "🔵"
+            btn_text = f"{status_icon} {p.get('title', 'Untitled')} ({p.get('status', 'Dev')})"
+            buttons.append([{"text": btn_text, "callback_data": f"view_pers_{idx}"}])
+
+        buttons.append([{"text": "➕ Add Personal Project", "callback_data": "action_add_personal"}])
+        buttons.append([{"text": "⬅️ Back to Dashboard", "callback_data": "menu_main"}])
+
+        keyboard = {"inline_keyboard": buttons}
+        if message_id:
+            self.edit_message(chat_id, message_id, text, keyboard)
+        else:
+            self.send_message(chat_id, text, keyboard)
+
+    def show_personal_detail(self, chat_id, idx, message_id=None):
+        data = load_data()
+        personal = data.get("personalProjects", [])
+        if idx >= len(personal):
+            self.show_personal_menu(chat_id, message_id)
+            return
+
+        p = personal[idx]
+        status = p.get("status", "Live")
+        status_icon = "🟢" if status.lower() == "live" else "🔵"
+
+        text = (
+            f"🚀 *Personal Project #{idx + 1}*\n\n"
+            f"• *Title:* {p.get('title', '')}\n"
+            f"• *Status:* {status_icon} *{status}*\n"
+            f"• *URL:* {p.get('url', 'None')}\n"
+            f"• *Button Text:* {p.get('buttonText', 'Visit Live Web App')}\n"
+            f"• *Tech:* {', '.join(p.get('tech', []))}\n\n"
+            f"*Description:*\n{p.get('description', '')}\n"
+        )
+
+        toggle_target = "In Progress" if status.lower() == "live" else "Live"
+        keyboard = {
+            "inline_keyboard": [
+                [
+                    {"text": f"🔄 Toggle to '{toggle_target}'", "callback_data": f"toggle_pers_status_{idx}"}
+                ],
+                [
+                    {"text": "✏️ Title", "callback_data": f"edit_pers_title_{idx}"},
+                    {"text": "✏️ Live URL", "callback_data": f"edit_pers_url_{idx}"}
+                ],
+                [
+                    {"text": "✏️ Button Text", "callback_data": f"edit_pers_btn_{idx}"},
+                    {"text": "✏️ Description", "callback_data": f"edit_pers_desc_{idx}"}
+                ],
+                [
+                    {"text": "🗑️ Delete Project", "callback_data": f"del_pers_confirm_{idx}"}
+                ],
+                [
+                    {"text": "⬅️ Back to Personal Projects", "callback_data": "menu_personal"}
+                ]
+            ]
+        }
+
+        if message_id:
+            self.edit_message(chat_id, message_id, text, keyboard)
+        else:
+            self.send_message(chat_id, text, keyboard)
+
+    # =========================================================================
+    # Callback Query Router
+    # =========================================================================
+
+    def handle_callback_query(self, cb):
+        cb_id = cb["id"]
+        data_str = cb.get("data", "")
+        chat_id = cb["message"]["chat"]["id"]
+        message_id = cb["message"]["message_id"]
+
+        self.answer_callback(cb_id)
+
+        # Cancel button
+        if data_str == "cancel_input":
+            user_states.pop(chat_id, None)
+            self.send_message(chat_id, "↩️ Action cancelled.")
+            self.show_main_menu(chat_id)
+            return
+
+        # Main Nav
+        if data_str == "menu_main":
+            self.show_main_menu(chat_id, message_id)
+        elif data_str == "menu_profile":
+            self.show_profile_menu(chat_id, message_id)
+        elif data_str == "menu_skills":
+            self.show_skills_menu(chat_id, message_id)
+        elif data_str == "menu_projects":
+            self.show_projects_menu(chat_id, message_id)
+        elif data_str == "menu_personal":
+            self.show_personal_menu(chat_id, message_id)
+
+        # Quick Actions
+        elif data_str == "action_get_data":
+            if DATA_PATH.exists():
+                self.send_document(chat_id, DATA_PATH, caption="📄 Current data.json configuration")
+            else:
+                self.send_message(chat_id, "❌ data.json not found.")
+        elif data_str == "action_resync":
+            d = load_data()
+            save_and_sync(d, "Force re-sync via Telegram Bot")
+            self.send_message(chat_id, "⚡ *Portfolio and Resume re-synchronized and deployed successfully!*")
+
+        # Profile Edits
+        elif data_str == "edit_prof_exp":
+            user_states[chat_id] = {"action": "set_prof_exp"}
+            cancel_kb = {"inline_keyboard": [[{"text": "❌ Cancel", "callback_data": "cancel_input"}]]}
+            self.send_message(chat_id, "📅 Please send the new *Experience Start Date* in `YYYY-MM-DD` (e.g. `2024-02-15`):", cancel_kb)
+        elif data_str == "edit_prof_title":
+            user_states[chat_id] = {"action": "set_prof_title"}
+            cancel_kb = {"inline_keyboard": [[{"text": "❌ Cancel", "callback_data": "cancel_input"}]]}
+            self.send_message(chat_id, "💼 Please send your new *Job Title* (e.g. `Senior PLM Developer`):", cancel_kb)
+        elif data_str == "edit_prof_name":
+            user_states[chat_id] = {"action": "set_prof_name"}
+            cancel_kb = {"inline_keyboard": [[{"text": "❌ Cancel", "callback_data": "cancel_input"}]]}
+            self.send_message(chat_id, "👤 Please send your full *Name*:", cancel_kb)
+        elif data_str == "edit_prof_phone":
+            user_states[chat_id] = {"action": "set_prof_phone"}
+            cancel_kb = {"inline_keyboard": [[{"text": "❌ Cancel", "callback_data": "cancel_input"}]]}
+            self.send_message(chat_id, "📞 Please send your new *Phone Number*:", cancel_kb)
+        elif data_str == "edit_prof_email":
+            user_states[chat_id] = {"action": "set_prof_email"}
+            cancel_kb = {"inline_keyboard": [[{"text": "❌ Cancel", "callback_data": "cancel_input"}]]}
+            self.send_message(chat_id, "📧 Please send your new *Email Address*:", cancel_kb)
+        elif data_str == "edit_prof_linkedin":
+            user_states[chat_id] = {"action": "set_prof_linkedin"}
+            cancel_kb = {"inline_keyboard": [[{"text": "❌ Cancel", "callback_data": "cancel_input"}]]}
+            self.send_message(chat_id, "🔗 Please send your *LinkedIn URL*:", cancel_kb)
+        elif data_str == "edit_prof_location":
+            user_states[chat_id] = {"action": "set_prof_location"}
+            cancel_kb = {"inline_keyboard": [[{"text": "❌ Cancel", "callback_data": "cancel_input"}]]}
+            self.send_message(chat_id, "📍 Please send your *Location* (e.g. `Chennai, India`):", cancel_kb)
+        elif data_str == "edit_prof_client":
+            user_states[chat_id] = {"action": "set_prof_client"}
+            cancel_kb = {"inline_keyboard": [[{"text": "❌ Cancel", "callback_data": "cancel_input"}]]}
+            self.send_message(chat_id, "🏢 Please send your *Client Engagement Name*:", cancel_kb)
+
+        # Skills Views & Edits
+        elif data_str.startswith("view_skills_"):
+            cat_key = data_str.replace("view_skills_", "")
+            self.show_skills_category(chat_id, cat_key, message_id)
+        elif data_str.startswith("add_skill_"):
+            cat_key = data_str.replace("add_skill_", "")
+            user_states[chat_id] = {"action": "add_skill_name", "cat_key": cat_key}
+            cancel_kb = {"inline_keyboard": [[{"text": "❌ Cancel", "callback_data": "cancel_input"}]]}
+            self.send_message(chat_id, f"➕ Please send the *Skill Name* to add to this category:", cancel_kb)
+        elif data_str.startswith("del_skill_"):
+            parts = data_str.split("_")
+            cat_key = parts[2]
+            s_idx = int(parts[3])
+            d = load_data()
+            if cat_key in d.get("skills", {}) and s_idx < len(d["skills"][cat_key]):
+                removed = d["skills"][cat_key].pop(s_idx)
+                save_and_sync(d, f"Remove skill {removed.get('name')} via Telegram")
+                self.show_skills_category(chat_id, cat_key, message_id)
+
+        # Experience Projects Router
+        elif data_str.startswith("view_proj_"):
+            idx = int(data_str.replace("view_proj_", ""))
+            self.show_project_detail(chat_id, idx, message_id)
+        elif data_str.startswith("toggle_proj_page_"):
+            parts = data_str.split("_")
+            idx = int(parts[3])
+            new_page = int(parts[4])
+            d = load_data()
+            if idx < len(d.get("projects", [])):
+                d["projects"][idx]["page"] = new_page
+                save_and_sync(d, f"Set project #{idx+1} to page {new_page}")
+                self.show_project_detail(chat_id, idx, message_id)
+        elif data_str.startswith("edit_proj_name_"):
+            idx = int(data_str.replace("edit_proj_name_", ""))
+            user_states[chat_id] = {"action": "set_proj_name", "idx": idx}
+            cancel_kb = {"inline_keyboard": [[{"text": "❌ Cancel", "callback_data": "cancel_input"}]]}
+            self.send_message(chat_id, f"✏️ Send new *Project Name* for Project #{idx + 1}:", cancel_kb)
+        elif data_str.startswith("edit_proj_period_"):
+            idx = int(data_str.replace("edit_proj_period_", ""))
+            user_states[chat_id] = {"action": "set_proj_period", "idx": idx}
+            cancel_kb = {"inline_keyboard": [[{"text": "❌ Cancel", "callback_data": "cancel_input"}]]}
+            self.send_message(chat_id, f"📅 Send new *Period* (e.g. `Mar 2026 – Oct 2026` or `Oct 2026 – Present`):", cancel_kb)
+        elif data_str.startswith("edit_proj_role_"):
+            idx = int(data_str.replace("edit_proj_role_", ""))
+            user_states[chat_id] = {"action": "set_proj_role", "idx": idx}
+            cancel_kb = {"inline_keyboard": [[{"text": "❌ Cancel", "callback_data": "cancel_input"}]]}
+            self.send_message(chat_id, f"💼 Send new *Role* (e.g. `Teamcenter Developer`):", cancel_kb)
+        elif data_str.startswith("edit_proj_tech_"):
+            idx = int(data_str.replace("edit_proj_tech_", ""))
+            user_states[chat_id] = {"action": "set_proj_tech", "idx": idx}
+            cancel_kb = {"inline_keyboard": [[{"text": "❌ Cancel", "callback_data": "cancel_input"}]]}
+            self.send_message(chat_id, f"🏷️ Send *Tech Tags* separated by commas (e.g. `TC 13.2, AWC 5.2, BMIDE, ITK`):", cancel_kb)
+        elif data_str.startswith("edit_proj_bullets_"):
+            idx = int(data_str.replace("edit_proj_bullets_", ""))
+            user_states[chat_id] = {"action": "set_proj_bullets", "idx": idx}
+            cancel_kb = {"inline_keyboard": [[{"text": "❌ Cancel", "callback_data": "cancel_input"}]]}
+            self.send_message(chat_id, f"📝 Send bullet points (one bullet per line) to replace achievements for Project #{idx + 1}:", cancel_kb)
+        elif data_str.startswith("del_proj_confirm_"):
+            idx = int(data_str.replace("del_proj_confirm_", ""))
+            d = load_data()
+            if idx < len(d.get("projects", [])):
+                del_p = d["projects"].pop(idx)
+                save_and_sync(d, f"Delete project {del_p.get('name')} via Telegram")
+                self.send_message(chat_id, f"🗑️ Deleted project *{del_p.get('name')}*.")
+                self.show_projects_menu(chat_id)
+        elif data_str == "action_add_project":
+            user_states[chat_id] = {"action": "add_project_wizard"}
+            cancel_kb = {"inline_keyboard": [[{"text": "❌ Cancel", "callback_data": "cancel_input"}]]}
+            self.send_message(
+                chat_id,
+                "➕ *Add New Project*\n\n"
+                "Please send the project details in this format:\n"
+                "`Name | Period | Role | Tech Tags | Page (1 or 2)`\n\n"
+                "*Example:*\n"
+                "`Substance Compliance | Mar 2026 – Present | Teamcenter Developer | TC 13.2, BMIDE | 1`",
+                cancel_kb
+            )
+
+        # Personal Projects Router
+        elif data_str.startswith("view_pers_"):
+            idx = int(data_str.replace("view_pers_", ""))
+            self.show_personal_detail(chat_id, idx, message_id)
+        elif data_str.startswith("toggle_pers_status_"):
+            idx = int(data_str.replace("toggle_pers_status_", ""))
+            d = load_data()
+            if idx < len(d.get("personalProjects", [])):
+                cur_status = d["personalProjects"][idx].get("status", "Live")
+                new_status = "In Progress" if cur_status.lower() == "live" else "Live"
+                d["personalProjects"][idx]["status"] = new_status
+                d["personalProjects"][idx]["statusColor"] = "green" if new_status.lower() == "live" else "blue"
+                save_and_sync(d, f"Toggle {d['personalProjects'][idx].get('title')} to {new_status}")
+                self.show_personal_detail(chat_id, idx, message_id)
+        elif data_str.startswith("edit_pers_title_"):
+            idx = int(data_str.replace("edit_pers_title_", ""))
+            user_states[chat_id] = {"action": "set_pers_title", "idx": idx}
+            cancel_kb = {"inline_keyboard": [[{"text": "❌ Cancel", "callback_data": "cancel_input"}]]}
+            self.send_message(chat_id, f"✏️ Send new *Title* for Personal Project #{idx + 1}:", cancel_kb)
+        elif data_str.startswith("edit_pers_url_"):
+            idx = int(data_str.replace("edit_pers_url_", ""))
+            user_states[chat_id] = {"action": "set_pers_url", "idx": idx}
+            cancel_kb = {"inline_keyboard": [[{"text": "❌ Cancel", "callback_data": "cancel_input"}]]}
+            self.send_message(chat_id, f"🔗 Send new *URL* for this project:", cancel_kb)
+        elif data_str.startswith("edit_pers_btn_"):
+            idx = int(data_str.replace("edit_pers_btn_", ""))
+            user_states[chat_id] = {"action": "set_pers_btn", "idx": idx}
+            cancel_kb = {"inline_keyboard": [[{"text": "❌ Cancel", "callback_data": "cancel_input"}]]}
+            self.send_message(chat_id, f"🔘 Send new *Button Text* (e.g. `Visit Live Web App`):", cancel_kb)
+        elif data_str.startswith("edit_pers_desc_"):
+            idx = int(data_str.replace("edit_pers_desc_", ""))
+            user_states[chat_id] = {"action": "set_pers_desc", "idx": idx}
+            cancel_kb = {"inline_keyboard": [[{"text": "❌ Cancel", "callback_data": "cancel_input"}]]}
+            self.send_message(chat_id, f"📝 Send new *Description* for this project:", cancel_kb)
+        elif data_str.startswith("del_pers_confirm_"):
+            idx = int(data_str.replace("del_pers_confirm_", ""))
+            d = load_data()
+            if idx < len(d.get("personalProjects", [])):
+                del_p = d["personalProjects"].pop(idx)
+                save_and_sync(d, f"Delete personal project {del_p.get('title')} via Telegram")
+                self.send_message(chat_id, f"🗑️ Deleted personal project *{del_p.get('title')}*.")
+                self.show_personal_menu(chat_id)
+        elif data_str == "action_add_personal":
+            user_states[chat_id] = {"action": "add_pers_wizard"}
+            cancel_kb = {"inline_keyboard": [[{"text": "❌ Cancel", "callback_data": "cancel_input"}]]}
+            self.send_message(
+                chat_id,
+                "➕ *Add Personal Project*\n\n"
+                "Please send in format:\n"
+                "`Title | Status (Live/In Progress) | URL | Description`\n\n"
+                "*Example:*\n"
+                "`TC Buddy | Live | https://gateway-ne.github.io/TC-Buddy/ | AI Teamcenter code generator`",
+                cancel_kb
+            )
+
+    # =========================================================================
+    # User Input Processing
+    # =========================================================================
+
+    def handle_user_state(self, chat_id, text):
+        state = user_states.pop(chat_id, None)
+        if not state:
+            return False
+
+        action = state.get("action")
+        d = load_data()
+
+        try:
+            # Profile updates
+            if action == "set_prof_exp":
+                datetime.strptime(text, "%Y-%m-%d")
+                d["personal"]["experienceStartDate"] = text
+                save_and_sync(d, f"Update experienceStartDate to {text}")
+                calc_exp = calculate_experience(text)
+                self.send_message(chat_id, f"✅ Experience date updated to `{text}` (*{calc_exp}*)!")
+                self.show_profile_menu(chat_id)
+                return True
+            elif action == "set_prof_title":
+                d["personal"]["title"] = text
+                save_and_sync(d, f"Update title to {text}")
+                self.send_message(chat_id, f"✅ Job title updated to *{text}*!")
+                self.show_profile_menu(chat_id)
+                return True
+            elif action == "set_prof_name":
+                d["personal"]["name"] = text
+                parts = text.split(maxsplit=1)
+                d["personal"]["firstName"] = parts[0]
+                d["personal"]["lastName"] = parts[1] if len(parts) > 1 else ""
+                save_and_sync(d, f"Update name to {text}")
+                self.send_message(chat_id, f"✅ Name updated to *{text}*!")
+                self.show_profile_menu(chat_id)
+                return True
+            elif action == "set_prof_phone":
+                d["personal"]["phone"] = text
+                save_and_sync(d, f"Update phone to {text}")
+                self.send_message(chat_id, f"✅ Phone updated to `{text}`!")
+                self.show_profile_menu(chat_id)
+                return True
+            elif action == "set_prof_email":
+                d["personal"]["email"] = text
+                save_and_sync(d, f"Update email to {text}")
+                self.send_message(chat_id, f"✅ Email updated to `{text}`!")
+                self.show_profile_menu(chat_id)
+                return True
+            elif action == "set_prof_linkedin":
+                d["personal"]["linkedin"] = text
+                d["personal"]["linkedinDisplay"] = text.replace("https://", "").replace("www.", "")
+                save_and_sync(d, f"Update LinkedIn to {text}")
+                self.send_message(chat_id, f"✅ LinkedIn updated to `{text}`!")
+                self.show_profile_menu(chat_id)
+                return True
+            elif action == "set_prof_location":
+                d["personal"]["location"] = text
+                save_and_sync(d, f"Update location to {text}")
+                self.send_message(chat_id, f"✅ Location updated to *{text}*!")
+                self.show_profile_menu(chat_id)
+                return True
+            elif action == "set_prof_client":
+                d["personal"]["client"] = text
+                save_and_sync(d, f"Update client to {text}")
+                self.send_message(chat_id, f"✅ Client updated to *{text}*!")
+                self.show_profile_menu(chat_id)
+                return True
+
+            # Skills updates
+            elif action == "add_skill_name":
+                cat_key = state.get("cat_key")
+                icon = text[:3].upper()
+                d["skills"][cat_key].append({"name": text, "icon": icon})
+                save_and_sync(d, f"Add skill {text} to {cat_key}")
+                self.send_message(chat_id, f"✅ Added skill *{text}*!")
+                self.show_skills_category(chat_id, cat_key)
+                return True
+
+            # Professional Projects updates
+            elif action == "set_proj_name":
+                idx = state.get("idx")
+                d["projects"][idx]["name"] = text
+                save_and_sync(d, f"Update project #{idx+1} name to {text}")
+                self.send_message(chat_id, f"✅ Project name updated to *{text}*!")
+                self.show_project_detail(chat_id, idx)
+                return True
+            elif action == "set_proj_period":
+                idx = state.get("idx")
+                d["projects"][idx]["period"] = text
+                save_and_sync(d, f"Update project #{idx+1} period to {text}")
+                self.send_message(chat_id, f"✅ Project period updated to *{text}*!")
+                self.show_project_detail(chat_id, idx)
+                return True
+            elif action == "set_proj_role":
+                idx = state.get("idx")
+                d["projects"][idx]["role"] = text
+                save_and_sync(d, f"Update project #{idx+1} role to {text}")
+                self.send_message(chat_id, f"✅ Project role updated to *{text}*!")
+                self.show_project_detail(chat_id, idx)
+                return True
+            elif action == "set_proj_tech":
+                idx = state.get("idx")
+                tags = [t.strip() for t in text.split(",") if t.strip()]
+                d["projects"][idx]["techTags"] = tags
+                d["projects"][idx]["techResume"] = ", ".join(tags)
+                save_and_sync(d, f"Update project #{idx+1} tech tags")
+                self.send_message(chat_id, f"✅ Tech tags updated to *{', '.join(tags)}*!")
+                self.show_project_detail(chat_id, idx)
+                return True
+            elif action == "set_proj_bullets":
+                idx = state.get("idx")
+                bullets = [b.strip() for b in text.split("\n") if b.strip()]
+                d["projects"][idx]["bullets"] = bullets
+                save_and_sync(d, f"Update project #{idx+1} bullets")
+                self.send_message(chat_id, f"✅ Saved {len(bullets)} bullets for this project!")
+                self.show_project_detail(chat_id, idx)
+                return True
+            elif action == "add_project_wizard":
+                parts = [p.strip() for p in text.split("|")]
+                name = parts[0]
+                period = parts[1] if len(parts) > 1 else "Present"
+                role = parts[2] if len(parts) > 2 else "Teamcenter Developer"
+                tech = [t.strip() for t in parts[3].split(",")] if len(parts) > 3 else ["TC 13.2", "BMIDE"]
+                page = int(parts[4]) if len(parts) > 4 and parts[4].isdigit() else 1
+                
+                new_proj = {
+                    "name": name,
+                    "period": period,
+                    "role": role,
+                    "teamRole": "Team Member",
+                    "techResume": ", ".join(tech),
+                    "techTags": tech,
+                    "categories": ["customization"],
+                    "page": page,
+                    "bullets": [f"Implemented PLM solutions for {name}."]
+                }
+                d["projects"].insert(0, new_proj)
+                save_and_sync(d, f"Add project {name}")
+                self.send_message(chat_id, f"✅ Added new project *{name}*!")
+                self.show_projects_menu(chat_id)
+                return True
+
+            # Personal Projects updates
+            elif action == "set_pers_title":
+                idx = state.get("idx")
+                d["personalProjects"][idx]["title"] = text
+                save_and_sync(d, f"Update personal project title to {text}")
+                self.send_message(chat_id, f"✅ Personal project title updated to *{text}*!")
+                self.show_personal_detail(chat_id, idx)
+                return True
+            elif action == "set_pers_url":
+                idx = state.get("idx")
+                d["personalProjects"][idx]["url"] = text
+                save_and_sync(d, f"Update personal project URL")
+                self.send_message(chat_id, f"✅ URL updated to `{text}`!")
+                self.show_personal_detail(chat_id, idx)
+                return True
+            elif action == "set_pers_btn":
+                idx = state.get("idx")
+                d["personalProjects"][idx]["buttonText"] = text
+                save_and_sync(d, f"Update personal project button text")
+                self.send_message(chat_id, f"✅ Button text updated to `{text}`!")
+                self.show_personal_detail(chat_id, idx)
+                return True
+            elif action == "set_pers_desc":
+                idx = state.get("idx")
+                d["personalProjects"][idx]["description"] = text
+                save_and_sync(d, f"Update personal project description")
+                self.send_message(chat_id, f"✅ Description updated!")
+                self.show_personal_detail(chat_id, idx)
+                return True
+            elif action == "add_pers_wizard":
+                parts = [p.strip() for p in text.split("|")]
+                title = parts[0]
+                status = parts[1] if len(parts) > 1 else "Live"
+                url = parts[2] if len(parts) > 2 else ""
+                desc = parts[3] if len(parts) > 3 else "Personal project."
+                
+                new_p = {
+                    "id": title.lower().replace(" ", "-"),
+                    "title": title,
+                    "status": status,
+                    "statusColor": "green" if status.lower() == "live" else "blue",
+                    "url": url,
+                    "buttonText": "Visit Live Web App",
+                    "description": desc,
+                    "tech": ["HTML", "JavaScript", "Python"]
+                }
+                d["personalProjects"].append(new_p)
+                save_and_sync(d, f"Add personal project {title}")
+                self.send_message(chat_id, f"✅ Added personal project *{title}*!")
+                self.show_personal_menu(chat_id)
+                return True
+
+        except Exception as e:
+            self.send_message(chat_id, f"❌ Error processing input: {e}")
+            return True
+
+        return False
+
+    # =========================================================================
+    # Main Handler
+    # =========================================================================
+
     def handle_update(self, update):
+        if "callback_query" in update:
+            self.handle_callback_query(update["callback_query"])
+            return
+
         message = update.get("message")
         if not message:
             return
@@ -150,14 +944,12 @@ class TelegramBot:
         chat_id = message["chat"]["id"]
         from_user = message.get("from", {})
         user_id = str(from_user.get("id", ""))
-        first_name = from_user.get("first_name", "Friend")
 
-        # Security check: if ALLOWED_USER_ID is set, only respond to that user
         if TELEGRAM_ALLOWED_USER_ID and user_id != TELEGRAM_ALLOWED_USER_ID:
             self.send_message(chat_id, "⛔ *Access Denied*: You are not authorized to manage this portfolio.")
             return
 
-        # Check for uploaded document (data.json)
+        # Direct file upload (data.json)
         if "document" in message:
             doc = message["document"]
             filename = doc.get("file_name", "")
@@ -171,15 +963,16 @@ class TelegramBot:
                         if "personal" not in new_data or "projects" not in new_data:
                             raise ValueError("Missing 'personal' or 'projects' root keys.")
                         
-                        save_and_sync(new_data)
+                        save_and_sync(new_data, "Update data.json via direct Telegram upload")
                         if temp_path.exists():
                             temp_path.unlink()
                         
                         self.send_message(
                             chat_id,
-                            "✅ *Success!* Updated `data.json` received.\n\n"
+                            "✅ *Success!* Updated `data.json` applied.\n\n"
                             "Both your *Portfolio* and *Resume* have been automatically synchronized and deployed!"
                         )
+                        self.show_main_menu(chat_id)
                         return
                     except Exception as e:
                         if temp_path.exists():
@@ -187,114 +980,52 @@ class TelegramBot:
                         self.send_message(chat_id, f"❌ *Invalid JSON file*: {e}")
                         return
             else:
-                self.send_message(chat_id, "⚠️ Please upload a `.json` file (specifically `data.json`).")
+                self.send_message(chat_id, "⚠️ Please upload a `.json` file.")
                 return
 
         text = message.get("text", "").strip()
         if not text:
             return
 
-        # Commands
-        if text.startswith("/start"):
-            welcome = (
-                f"👋 *Hello {first_name}!*\n\n"
-                f"Welcome to your *Dinesh K Portfolio Bot*.\n"
-                f"Your Telegram User ID is: `{user_id}`\n\n"
-                "📌 *Available Commands:*\n"
-                "• `/status` — View current live portfolio details & experience\n"
-                "• `/exp YYYY-MM-DD` — Update experience start date\n"
-                "• `/title <Title>` — Update job title\n"
-                "• `/get_data` — Receive current `data.json` file\n"
-                "• `/help` — Show help message\n\n"
-                "💡 *Pro-Tip:* You can also simply **drag & drop or send `data.json`** directly here in this chat to auto-update!"
-            )
-            self.send_message(chat_id, welcome)
+        # Check conversation state
+        if self.handle_user_state(chat_id, text):
+            return
 
-        elif text.startswith("/help"):
-            help_msg = (
-                "🛠️ *Portfolio Telegram Bot Help:*\n\n"
-                "1️⃣ *Check Details:* `/status`\n"
-                "2️⃣ *Update Experience Date:* `/exp 2024-02-15`\n"
-                "3️⃣ *Update Job Title:* `/title PLM / Teamcenter Developer`\n"
-                "4️⃣ *Download data.json:* `/get_data`\n"
-                "5️⃣ *Upload data.json:* Send `data.json` as a file attachment anytime!"
-            )
-            self.send_message(chat_id, help_msg)
-
-        elif text.startswith("/status"):
-            try:
-                data = load_data()
-                p = data.get("personal", {})
-                start_date = p.get("experienceStartDate", "N/A")
-                calc_exp = calculate_experience(start_date)
-                proj_count = len(data.get("projects", []))
-                pers_count = len(data.get("personalProjects", []))
-                
-                status_text = (
-                    "📊 *Current Portfolio Status:*\n\n"
-                    f"👤 *Name:* {p.get('name', 'Dinesh K')}\n"
-                    f"💼 *Title:* {p.get('title', 'N/A')}\n"
-                    f"📅 *Start Date:* `{start_date}` (*{calc_exp}*)\n"
-                    f"📁 *Experience Projects:* {proj_count}\n"
-                    f"🚀 *Personal Projects:* {pers_count}\n"
-                    f"📍 *Location:* {p.get('location', 'Chennai, India')}\n\n"
-                    f"🌐 *Portfolio:* {p.get('portfolioUrl', 'https://gateway-ne.github.io/DineshK_Portfolio')}\n"
-                    f"📄 *Resume:* {p.get('portfolioUrl', 'https://gateway-ne.github.io/DineshK_Portfolio')}/resume.html"
-                )
-                self.send_message(chat_id, status_text)
-            except Exception as e:
-                self.send_message(chat_id, f"❌ Error loading status: {e}")
-
-        elif text.startswith("/exp"):
-            parts = text.split(maxsplit=1)
-            if len(parts) < 2:
-                self.send_message(chat_id, "⚠️ Usage: `/exp YYYY-MM-DD` (e.g. `/exp 2024-02-15`)")
-                return
-            new_date = parts[1].strip()
-            try:
-                # Validate date format
-                datetime.strptime(new_date, "%Y-%m-%d")
-                data = load_data()
-                data["personal"]["experienceStartDate"] = new_date
-                save_and_sync(data)
-                calc_exp = calculate_experience(new_date)
-                self.send_message(
-                    chat_id,
-                    f"✅ *Experience Start Date Updated!*\n\n"
-                    f"📅 New Date: `{new_date}`\n"
-                    f"⏱️ Total Experience: *{calc_exp}*\n"
-                    f"⚡ Both Portfolio and Resume have been synchronized!"
-                )
-            except ValueError:
-                self.send_message(chat_id, "❌ Invalid date format. Please use `YYYY-MM-DD` (e.g. `2024-02-15`).")
-            except Exception as e:
-                self.send_message(chat_id, f"❌ Error updating: {e}")
-
-        elif text.startswith("/title"):
-            parts = text.split(maxsplit=1)
-            if len(parts) < 2:
-                self.send_message(chat_id, "⚠️ Usage: `/title <Your New Title>`")
-                return
-            new_title = parts[1].strip()
-            try:
-                data = load_data()
-                data["personal"]["title"] = new_title
-                save_and_sync(data)
-                self.send_message(chat_id, f"✅ *Job Title Updated!*\n\n💼 New Title: *{new_title}*")
-            except Exception as e:
-                self.send_message(chat_id, f"❌ Error updating title: {e}")
-
-        elif text.startswith("/get_data"):
+        # Handle Bottom Persistent Buttons
+        if text == "👤 Profile & Bio" or text == "/profile":
+            self.show_profile_menu(chat_id)
+        elif text == "🛠️ Skills Manager" or text == "/skills":
+            self.show_skills_menu(chat_id)
+        elif text == "💼 Experience Projects" or text == "/projects":
+            self.show_projects_menu(chat_id)
+        elif text == "🚀 Personal Projects" or text == "/personal":
+            self.show_personal_menu(chat_id)
+        elif text == "📄 Download data.json" or text == "/get_data":
             if DATA_PATH.exists():
                 self.send_document(chat_id, DATA_PATH, caption="📄 Current data.json configuration")
-            else:
-                self.send_message(chat_id, "❌ data.json not found.")
-
+        elif text == "⚡ Force Re-Sync" or text == "/sync":
+            d = load_data()
+            save_and_sync(d, "Force re-sync via Telegram Bot")
+            self.send_message(chat_id, "⚡ *Portfolio and Resume re-synchronized and deployed successfully!*")
+        elif text == "📊 Live Status" or text == "/status":
+            d = load_data()
+            p = d.get("personal", {})
+            calc = calculate_experience(p.get("experienceStartDate", ""))
+            self.send_message(
+                chat_id,
+                f"📊 *Live Status:*\n\n"
+                f"👤 *{p.get('name')}* — {p.get('title')}\n"
+                f"📅 Experience: `{p.get('experienceStartDate')}` (*{calc}*)\n"
+                f"📁 Projects: {len(d.get('projects', []))} | Personal: {len(d.get('personalProjects', []))}\n"
+                f"🌐 https://gateway-ne.github.io/DineshK_Portfolio/"
+            )
+        elif text == "📋 Main Dashboard" or text == "/menu" or text == "/start":
+            self.show_main_menu(chat_id)
         else:
-            self.send_message(chat_id, "❓ Unknown command. Type `/help` for available commands or send `data.json` to update.")
+            self.show_main_menu(chat_id)
 
     def run(self):
-        print("[BOT] Starting Telegram Bot long polling...")
+        print("[BOT] Button-driven Dinesh K Portfolio Telegram Bot running...")
         print("[BOT] Press Ctrl+C to stop.")
         while True:
             try:
@@ -307,7 +1038,7 @@ class TelegramBot:
                             self.offset = update["update_id"] + 1
                             self.handle_update(update)
                 elif res.status_code == 401:
-                    print("[BOT] Error: Invalid TELEGRAM_BOT_TOKEN. Please check your .env file.")
+                    print("[BOT] Error: Invalid TELEGRAM_BOT_TOKEN.")
                     time.sleep(10)
                 else:
                     time.sleep(2)
@@ -317,16 +1048,12 @@ class TelegramBot:
                 print("\n[BOT] Stopping Telegram Bot...")
                 break
             except Exception as e:
-                print(f"[BOT] Unexpected polling error: {e}")
+                print(f"[BOT] Polling error: {e}")
                 time.sleep(2)
 
 if __name__ == "__main__":
     if not TELEGRAM_BOT_TOKEN:
-        print("=" * 60)
-        print("ERROR: TELEGRAM_BOT_TOKEN is not set!")
-        print("Please create or edit '.env' in this directory with:")
-        print("TELEGRAM_BOT_TOKEN=your_token_from_botfather")
-        print("=" * 60)
+        print("ERROR: TELEGRAM_BOT_TOKEN is not set in .env")
         sys.exit(1)
 
     bot = TelegramBot(TELEGRAM_BOT_TOKEN)

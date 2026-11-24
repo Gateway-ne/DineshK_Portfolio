@@ -470,7 +470,7 @@
         <!-- SYNC:RESUME_HEADER_START -->
         <div class="banner-name">DINESH K</div>
         <div class="banner-title">
-          PLM / Teamcenter Developer — <span class="exp-years-dynamic">2.3+</span> Years Experience
+          PLM / Teamcenter Developer — <span class="exp-years-dynamic">2.9</span> Years Experience
         </div>
         <div class="banner-contact">
           <a href="mailto:dineshk.plmdev@gmail.com">dineshk.plmdev@gmail.com</a> | +91 63853 13244 | <a href="https://linkedin.com/in/dineshk142" target="_blank" rel="noopener">linkedin.com/in/dineshk142</a><br>
@@ -483,7 +483,7 @@
       <div class="section-title">PROFESSIONAL SUMMARY</div>
       <!-- SYNC:RESUME_SUMMARY_START -->
       <p class="section-p">
-        PLM professional with <span class="exp-years-dynamic">2.3+</span> years at TCS specializing in Siemens Teamcenter development, configuration, and administration. Hands-on experience across BMIDE customization, ITK/SOA development, substance compliance, dispatcher upgrades, and workflow automation. Client: Baker Hughes Oil Field Operations LLC.
+        PLM professional with <span class="exp-years-dynamic">2.9</span> years at TCS specializing in Siemens Teamcenter development, configuration, and administration. Hands-on experience across BMIDE customization, ITK/SOA development, substance compliance, dispatcher upgrades, and workflow automation. Client: Baker Hughes Oil Field Operations LLC.
       </p>
 <!-- SYNC:RESUME_SUMMARY_END -->
 
@@ -672,13 +672,24 @@
   </div>
 
   <script>
-    // 1. Calculate & auto-update total years of experience dynamically (Start: Feb 2024)
-    function updateExperienceYears() {
-      const expStartDate = new Date(2024, 1, 1); // February 1, 2024
+    // 1. Calculate & auto-update total years of experience dynamically (Start: Feb 15, 2024)
+    function calculateExp() {
+      const expStartDate = new Date(2024, 1, 15); // February 15, 2024
       const currentDate = new Date();
-      const diffYears = (currentDate - expStartDate) / (1000 * 60 * 60 * 24 * 365.25);
-      const formattedExpYears = (diffYears > 0 ? diffYears.toFixed(1) : '2.3') + '+';
+      let expYears = currentDate.getFullYear() - expStartDate.getFullYear();
+      let expMonths = currentDate.getMonth() - expStartDate.getMonth();
+      if (currentDate.getDate() < expStartDate.getDate()) {
+        expMonths--;
+      }
+      if (expMonths < 0) {
+        expYears--;
+        expMonths += 12;
+      }
+      return `${expYears}.${expMonths}`;
+    }
 
+    function updateExperienceYears() {
+      const formattedExpYears = calculateExp();
       document.querySelectorAll('.exp-years-dynamic').forEach(el => {
         el.textContent = formattedExpYears;
       });
@@ -700,10 +711,7 @@
           const element = document.getElementById('resume-document');
 
           // Dynamically compute filename: FirstName_LastName_PLM_exp-year-Yrs_Resume.pdf
-          const expStartDate = new Date(2024, 1, 1);
-          const currentDate = new Date();
-          const diffYears = (currentDate - expStartDate) / (1000 * 60 * 60 * 24 * 365.25);
-          const expYearsNum = (diffYears > 0 ? diffYears.toFixed(1) : '2.3');
+          const expYearsNum = calculateExp();
           const dynamicFilename = `Dinesh_K_PLM_${expYearsNum}-Yrs_Resume.pdf`;
 
           const opt = {

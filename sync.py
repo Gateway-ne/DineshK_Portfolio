@@ -12,6 +12,7 @@ Usage:
 import json
 import os
 import re
+from datetime import datetime
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -24,6 +25,21 @@ def load_data():
         raise FileNotFoundError(f"Cannot find {DATA_FILE}")
     with open(DATA_FILE, "r", encoding="utf-8") as f:
         return json.load(f)
+
+def get_experience_years(data) -> str:
+    start_str = data.get("personal", {}).get("experienceStartDate", "2024-02-15")
+    try:
+        start = datetime.strptime(start_str, "%Y-%m-%d")
+        now = datetime.now()
+        months = (now.year - start.year) * 12 + (now.month - start.month)
+        if now.day < start.day:
+            months -= 1
+        months = max(0, months)
+        years = months // 12
+        rem_months = months % 12
+        return f"{years}.{rem_months}"
+    except Exception:
+        return "2.9"
 
 def replace_block(content: str, tag: str, replacement: str) -> str:
     """Replaces content between <!-- SYNC:TAG_START --> and <!-- SYNC:TAG_END -->."""
@@ -43,10 +59,11 @@ def replace_block(content: str, tag: str, replacement: str) -> str:
 # ==============================================================================
 
 def generate_portfolio_metrics(data) -> str:
+    exp_str = get_experience_years(data)
     projects_count = f"{len(data['projects'])}+"
     certs_count = f"{len(data['certifications'])}+"
     return f"""          <div class="metric-card glass-card">
-            <div class="metric-num exp-years-dynamic">2.3+</div>
+            <div class="metric-num exp-years-dynamic">{exp_str}</div>
             <div class="metric-label">Years Experience</div>
           </div>
           <div class="metric-card glass-card">
@@ -165,9 +182,10 @@ def generate_portfolio_personal_projects(data) -> str:
 
 def generate_resume_header(data) -> str:
     p = data["personal"]
+    exp_str = get_experience_years(data)
     return f"""        <div class="banner-name">{p.get('name').upper()}</div>
         <div class="banner-title">
-          {p.get('title')} — <span class="exp-years-dynamic">2.3+</span> Years Experience
+          {p.get('title')} — <span class="exp-years-dynamic">{exp_str}</span> Years Experience
         </div>
         <div class="banner-contact">
           <a href="mailto:{p.get('email')}">{p.get('email')}</a> | {p.get('phone')} | <a href="{p.get('linkedin')}" target="_blank" rel="noopener">{p.get('linkedinDisplay')}</a><br>
@@ -175,7 +193,8 @@ def generate_resume_header(data) -> str:
         </div>"""
 
 def generate_resume_summary(data) -> str:
-    summary_text = data["summary"]["short"].replace("{expYears}", '<span class="exp-years-dynamic">2.3+</span> years')
+    exp_str = get_experience_years(data)
+    summary_text = data["summary"]["short"].replace("{expYears}", f'<span class="exp-years-dynamic">{exp_str}</span> years')
     return f"""      <p class="section-p">
         {summary_text}
       </p>"""
@@ -268,6 +287,8 @@ def sync():
         with open(INDEX_FILE, "r", encoding="utf-8") as f:
             idx_content = f.read()
             
+        exp_str = get_experience_years(data)
+        idx_content = re.sub(r'<span class="exp-years-dynamic">[^<]*</span>', f'<span class="exp-years-dynamic">{exp_str}</span>', idx_content)
         idx_content = replace_block(idx_content, "PORTFOLIO_METRICS", generate_portfolio_metrics(data))
         idx_content = replace_block(idx_content, "PORTFOLIO_SKILLS", generate_portfolio_skills(data))
         idx_content = replace_block(idx_content, "PORTFOLIO_TIMELINE", generate_portfolio_timeline(data))

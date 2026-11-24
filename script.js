@@ -17,11 +17,19 @@ document.addEventListener('DOMContentLoaded', () => {
     currentYearSpan.textContent = new Date().getFullYear();
   }
 
-  // Calculate & auto-update total years of experience dynamically (Start: Feb 2024)
-  const expStartDate = new Date(2024, 1, 1); // February 2024
+  // Calculate & auto-update total years of experience dynamically (Start: Feb 15, 2024)
+  const expStartDate = new Date(2024, 1, 15); // February 15, 2024
   const currentDate = new Date();
-  const diffYears = (currentDate - expStartDate) / (1000 * 60 * 60 * 24 * 365.25);
-  const formattedExpYears = (diffYears > 0 ? diffYears.toFixed(1) : '2.3') + '+';
+  let expYears = currentDate.getFullYear() - expStartDate.getFullYear();
+  let expMonths = currentDate.getMonth() - expStartDate.getMonth();
+  if (currentDate.getDate() < expStartDate.getDate()) {
+    expMonths--;
+  }
+  if (expMonths < 0) {
+    expYears--;
+    expMonths += 12;
+  }
+  const formattedExpYears = `${expYears}.${expMonths}`;
 
   document.querySelectorAll('.exp-years-dynamic').forEach(el => {
     el.textContent = formattedExpYears;
