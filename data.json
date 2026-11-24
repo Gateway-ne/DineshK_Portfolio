@@ -49,6 +49,10 @@
   "skills": {
     "coreTC": [
       {
+        "name": "Teamcenter 13.x",
+        "icon": "TEA"
+      },
+      {
         "name": "Active Workspace 5.x",
         "icon": "AW"
       },
@@ -91,10 +95,6 @@
       {
         "name": "Change Management",
         "icon": "CM"
-      },
-      {
-        "name": "Teamcenter 13.x",
-        "icon": "TEA"
       }
     ],
     "integration": [
