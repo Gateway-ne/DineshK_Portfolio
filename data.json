@@ -95,10 +95,6 @@
       {
         "name": "Change Management",
         "icon": "CM"
-      },
-      {
-        "name": "AI Development",
-        "icon": "AI "
       }
     ],
     "integration": [
