@@ -219,7 +219,7 @@ def generate_resume_skills(data) -> str:
         <div class="skills-value">{join_skills('tools')}</div>
 
         <div class="skills-label">Documentation</div>
-        <div class="skills-value">{join_skills('documentation', ' | ')}</div>
+        <div class="skills-value">{join_skills('documentation')}</div>
       </div>"""
 
 def generate_resume_experience(data) -> str:
