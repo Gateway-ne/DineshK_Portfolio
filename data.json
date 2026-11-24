@@ -426,6 +426,23 @@
         "AI Code Generation",
         "Vector DB"
       ]
+    },
+    {
+      "id": "portfolio-automation",
+      "title": "Portfolio Automation & Telegram Bot CMS",
+      "status": "Live",
+      "statusColor": "green",
+      "url": "https://gateway-ne.github.io/DineshK_Portfolio/",
+      "buttonText": "Visit Live Web App",
+      "description": "Engineered an automated serverless content management and continuous deployment pipeline for live portfolio and resume. Built a secure Telegram Bot admin interface (@dineshk_portfolio_bot) supporting remote profile, skill, and project editing, dynamic experience tenure computation, single-instance socket locks, and batch CI/CD deployment to GitHub Pages with live deployment notifications.",
+      "tech": [
+        "Python",
+        "Telegram Bot API",
+        "GitHub Actions CI/CD",
+        "JavaScript",
+        "HTML5 / CSS3",
+        "Batch Automation"
+      ]
     }
   ],
   "education": {
