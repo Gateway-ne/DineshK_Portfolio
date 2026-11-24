@@ -746,7 +746,7 @@ class TelegramBot:
         user_id = str(from_user.get("id", ""))
 
         global TELEGRAM_ALLOWED_USER_ID
-        if TELEGRAM_ALLOWED_USER_ID and user_id != TELEGRAM_ALLOWED_USER_ID:
+        if not TELEGRAM_ALLOWED_USER_ID or user_id != TELEGRAM_ALLOWED_USER_ID:
             self.answer_callback(cb_id, text="⛔ Access Denied: Private Admin Only!")
             return
 
@@ -1217,6 +1217,7 @@ class TelegramBot:
     # =========================================================================
 
     def handle_update(self, update):
+        global TELEGRAM_ALLOWED_USER_ID
         if "callback_query" in update:
             self.handle_callback_query(update["callback_query"])
             return
@@ -1229,19 +1230,38 @@ class TelegramBot:
         from_user = message.get("from", {})
         user_id = str(from_user.get("id", ""))
         first_name = from_user.get("first_name", "Friend")
+        username = from_user.get("username", "")
+        text = message.get("text", "").strip()
 
-        global TELEGRAM_ALLOWED_USER_ID
-        if not TELEGRAM_ALLOWED_USER_ID:
+        # Secret Admin Passcode Check
+        if text.lower() in ("/claim dinesh2026", "dinesh2026", "/admin dinesh2026"):
             TELEGRAM_ALLOWED_USER_ID = user_id
             save_user_id_to_env(user_id)
+            print(f"[SECURITY] Admin claimed by {first_name} (@{username}, ID: {user_id})")
             self.send_message(
                 chat_id,
-                f"🔒 *Admin Access Locked & Secured!*\n\n"
-                f"Hello {first_name}! Your Telegram account (`ID: {user_id}`) is now registered as the **sole authorized admin**.\n\n"
-                f"Nobody else on Telegram can view, access, or modify your portfolio controls."
+                f"🎉 *Admin Access Claimed & Secured!*\n\n"
+                f"Welcome, *{first_name}*! Your Telegram account (`ID: {user_id}`) is now permanently verified and locked as the **sole authorized admin**.\n\n"
+                f"All strangers and unauthorized users are now blocked permanently."
             )
-        elif user_id != TELEGRAM_ALLOWED_USER_ID:
-            self.send_message(chat_id, "⛔ *Access Denied*: This is a private portfolio admin bot. You are not authorized.")
+            self.show_main_menu(chat_id)
+            return
+
+        if TELEGRAM_ALLOWED_USER_ID:
+            if user_id != TELEGRAM_ALLOWED_USER_ID:
+                print(f"[SECURITY] Blocked stranger: {first_name} (@{username}, ID: {user_id})")
+                self.send_message(
+                    chat_id,
+                    "⛔ *Access Denied*: This is a private portfolio admin bot.\n\n"
+                    "If you are Dinesh, send `/claim dinesh2026` to unlock access."
+                )
+                return
+        else:
+            self.send_message(
+                chat_id,
+                "🔒 *Private Portfolio Admin Bot*\n\n"
+                "Please send `/claim dinesh2026` to unlock and claim admin access."
+            )
             return
 
         # Direct file upload (data.json)
