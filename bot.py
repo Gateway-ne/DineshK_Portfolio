@@ -473,7 +473,12 @@ class TelegramBot:
         }
         title = cat_titles.get(cat_key, cat_key)
 
-        text = f"🛠️ *Skills in {title}* ({len(skills)} items)\n\n"
+        text = (
+            f"🛠️ *Skills in {title}* ({len(skills)} items)\n\n"
+            f"• Tap `⬆️` or `⬇️` to rearrange skill order.\n"
+            f"• Tap skill name for Top/Bottom positioning & Rename.\n"
+            f"• Tap `❌` to delete a skill.\n\n"
+        )
         if not skills:
             text += "_No skills added in this category yet._\n"
         else:
@@ -481,21 +486,77 @@ class TelegramBot:
                 text += f"`{idx + 1}.` {s.get('name', '')}\n"
 
         buttons = [
-            [{"text": f"➕ Add New Skill", "callback_data": f"add_skill_{cat_key}"}]
+            [{"text": "➕ Add New Skill", "callback_data": f"add_skill_{cat_key}"}]
         ]
         
-        del_row = []
         for idx, s in enumerate(skills):
-            del_row.append({"text": f"❌ {s.get('name', '')[:14]}", "callback_data": f"del_skill_{cat_key}_{idx}"})
-            if len(del_row) == 2:
-                buttons.append(del_row)
-                del_row = []
-        if del_row:
-            buttons.append(del_row)
+            row = [
+                {"text": f"{idx + 1}. {s.get('name')[:14]}", "callback_data": f"detail_skill_{cat_key}_{idx}"}
+            ]
+            if idx > 0:
+                row.append({"text": "⬆️", "callback_data": f"move_skill_{cat_key}_{idx}_up"})
+            else:
+                row.append({"text": "·", "callback_data": "noop"})
+
+            if idx < len(skills) - 1:
+                row.append({"text": "⬇️", "callback_data": f"move_skill_{cat_key}_{idx}_down"})
+            else:
+                row.append({"text": "·", "callback_data": "noop"})
+
+            row.append({"text": "❌", "callback_data": f"del_skill_{cat_key}_{idx}"})
+            buttons.append(row)
 
         buttons.append([{"text": "⬅️ Back to Skills", "callback_data": "menu_skills"}])
         keyboard = {"inline_keyboard": buttons}
 
+        if message_id:
+            self.edit_message(chat_id, message_id, text, keyboard)
+        else:
+            self.send_message(chat_id, text, keyboard)
+
+    def show_skill_detail(self, chat_id, cat_key, idx, message_id=None):
+        data = load_data()
+        skills = data.get("skills", {}).get(cat_key, [])
+        if idx >= len(skills):
+            self.show_skills_category(chat_id, cat_key, message_id)
+            return
+
+        s = skills[idx]
+        cat_titles = {
+            "coreTC": "Core Teamcenter",
+            "integration": "Integration & Upgrade",
+            "programming": "Programming & Database",
+            "tools": "Tools & Platforms",
+            "documentation": "Documentation & Guides"
+        }
+        title = cat_titles.get(cat_key, cat_key)
+
+        text = (
+            f"🛠️ *Skill: {s.get('name')}*\n\n"
+            f"• *Category:* {title}\n"
+            f"• *Current Order:* #{idx + 1} of {len(skills)}\n\n"
+            f"Tap an option below to arrange or modify:"
+        )
+
+        buttons = [
+            [
+                {"text": "⬆️ Move Up", "callback_data": f"move_skill_{cat_key}_{idx}_up"},
+                {"text": "⬇️ Move Down", "callback_data": f"move_skill_{cat_key}_{idx}_down"}
+            ],
+            [
+                {"text": "🔝 Move to Top", "callback_data": f"move_skill_{cat_key}_{idx}_top"},
+                {"text": "🔚 Move to Bottom", "callback_data": f"move_skill_{cat_key}_{idx}_bottom"}
+            ],
+            [
+                {"text": "✏️ Rename Skill", "callback_data": f"rename_skill_{cat_key}_{idx}"},
+                {"text": "❌ Delete Skill", "callback_data": f"del_skill_{cat_key}_{idx}"}
+            ],
+            [
+                {"text": f"⬅️ Back to {title}", "callback_data": f"view_skills_{cat_key}"}
+            ]
+        ]
+
+        keyboard = {"inline_keyboard": buttons}
         if message_id:
             self.edit_message(chat_id, message_id, text, keyboard)
         else:
@@ -658,6 +719,10 @@ class TelegramBot:
 
         self.answer_callback(cb_id)
 
+        # No-op button (placeholder)
+        if data_str == "noop":
+            return
+
         # Cancel button
         if data_str == "cancel_input":
             user_states.pop(chat_id, None)
@@ -726,6 +791,43 @@ class TelegramBot:
         elif data_str.startswith("view_skills_"):
             cat_key = data_str.replace("view_skills_", "")
             self.show_skills_category(chat_id, cat_key, message_id)
+        elif data_str.startswith("detail_skill_"):
+            parts = data_str.split("_")
+            cat_key = parts[2]
+            idx = int(parts[3])
+            self.show_skill_detail(chat_id, cat_key, idx, message_id)
+        elif data_str.startswith("move_skill_"):
+            parts = data_str.split("_")
+            cat_key = parts[2]
+            idx = int(parts[3])
+            direction = parts[4]
+            d = load_data()
+            skills_list = d.get("skills", {}).get(cat_key, [])
+
+            if idx < len(skills_list):
+                if direction == "up" and idx > 0:
+                    skills_list[idx], skills_list[idx - 1] = skills_list[idx - 1], skills_list[idx]
+                    self.trigger_local_update(chat_id, d, f"Moved '{skills_list[idx - 1].get('name')}' up to #{idx}")
+                elif direction == "down" and idx < len(skills_list) - 1:
+                    skills_list[idx], skills_list[idx + 1] = skills_list[idx + 1], skills_list[idx]
+                    self.trigger_local_update(chat_id, d, f"Moved '{skills_list[idx + 1].get('name')}' down to #{idx + 2}")
+                elif direction == "top" and idx > 0:
+                    item = skills_list.pop(idx)
+                    skills_list.insert(0, item)
+                    self.trigger_local_update(chat_id, d, f"Moved '{item.get('name')}' to Top (#1)")
+                elif direction == "bottom" and idx < len(skills_list) - 1:
+                    item = skills_list.pop(idx)
+                    skills_list.append(item)
+                    self.trigger_local_update(chat_id, d, f"Moved '{item.get('name')}' to Bottom (#{len(skills_list)})")
+
+                self.show_skills_category(chat_id, cat_key, message_id)
+        elif data_str.startswith("rename_skill_"):
+            parts = data_str.split("_")
+            cat_key = parts[2]
+            idx = int(parts[3])
+            user_states[chat_id] = {"action": "rename_skill_name", "cat_key": cat_key, "idx": idx}
+            cancel_kb = {"inline_keyboard": [[{"text": "❌ Cancel", "callback_data": "cancel_input"}]]}
+            self.send_message(chat_id, "✏️ Please send the new name for this skill:", cancel_kb)
         elif data_str.startswith("add_skill_"):
             cat_key = data_str.replace("add_skill_", "")
             user_states[chat_id] = {"action": "add_skill_name", "cat_key": cat_key}
@@ -920,6 +1022,16 @@ class TelegramBot:
                 icon = text[:3].upper()
                 d["skills"][cat_key].append({"name": text, "icon": icon})
                 self.trigger_local_update(chat_id, d, f"Added skill '{text}' to {cat_key}")
+                self.show_skills_category(chat_id, cat_key)
+                return True
+            elif action == "rename_skill_name":
+                cat_key = state.get("cat_key")
+                idx = state.get("idx")
+                if idx < len(d.get("skills", {}).get(cat_key, [])):
+                    old_name = d["skills"][cat_key][idx].get("name")
+                    d["skills"][cat_key][idx]["name"] = text
+                    d["skills"][cat_key][idx]["icon"] = text[:3].upper()
+                    self.trigger_local_update(chat_id, d, f"Renamed skill '{old_name}' to '{text}'")
                 self.show_skills_category(chat_id, cat_key)
                 return True
 

@@ -863,9 +863,11 @@
           <label>${m.title}</label>
           <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px;">
             ${items.map((s, sIdx) => `
-              <span class="badge" style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px;">
-                ${s.name}
-                <span style="cursor: pointer; opacity: 0.7;" onclick="removeSkill('${m.key}', ${sIdx})">&times;</span>
+              <span class="badge" style="display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px;">
+                <span style="cursor: pointer; opacity: 0.6; font-size: 10px;" title="Move Left / Earlier" onclick="moveSkill('${m.key}', ${sIdx}, -1)">◀</span>
+                <strong>${s.name}</strong>
+                <span style="cursor: pointer; opacity: 0.6; font-size: 10px;" title="Move Right / Later" onclick="moveSkill('${m.key}', ${sIdx}, 1)">▶</span>
+                <span style="cursor: pointer; opacity: 0.7; color: #ef4444; margin-left: 3px;" title="Delete" onclick="removeSkill('${m.key}', ${sIdx})">&times;</span>
               </span>
             `).join('')}
           </div>
@@ -876,6 +878,16 @@
         `;
         container.appendChild(group);
       });
+    }
+
+    function moveSkill(categoryKey, idx, direction) {
+      const list = globalData.skills[categoryKey];
+      const targetIdx = idx + direction;
+      if (targetIdx < 0 || targetIdx >= list.length) return;
+      const temp = list[idx];
+      list[idx] = list[targetIdx];
+      list[targetIdx] = temp;
+      renderSkills();
     }
 
     function addSkill(categoryKey) {
