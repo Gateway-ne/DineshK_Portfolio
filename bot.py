@@ -2,11 +2,11 @@
 """
 bot.py - Button-Driven Telegram Admin Bot for Dinesh K's Portfolio & Resume
 
-Every single option from admin.html is available as a touch button:
-- Persistent Bottom Keyboard (always docked at the bottom of the chat)
-- Interactive Inline Buttons for every category, project, skill, and profile field
-- Instant 1-tap toggles (Live/Dev, Page 1/2)
-- Built-in [❌ Cancel] buttons on all prompts
+Features:
+- Persistent Bottom Keyboard (always docked above chat input)
+- Interactive Inline Buttons for all actions & fields
+- Instant update confirmation message on every change
+- Automatic GitHub Actions deployment watcher: messages user as soon as deployment finishes!
 """
 
 import base64
@@ -14,6 +14,7 @@ import json
 import os
 import subprocess
 import sys
+import threading
 import time
 from datetime import datetime
 from pathlib import Path
@@ -52,7 +53,6 @@ def get_git_executable():
 
 user_states = {}
 
-# Persistent Bottom Keyboard (Always visible on phone screen)
 DASHBOARD_REPLY_KEYBOARD = {
     "keyboard": [
         [{"text": "👤 Profile & Bio"}, {"text": "🛠️ Skills Manager"}],
@@ -139,11 +139,71 @@ def push_to_github(data, commit_msg):
     except Exception as e:
         print(f"[BOT] GitHub API error: {e}")
 
+def monitor_github_deployment(bot, chat_id, title_msg):
+    """Monitors GitHub Actions run in background and alerts the user when live deployment completes."""
+    if not GITHUB_TOKEN:
+        return
+
+    time.sleep(6)  # Brief delay to allow GitHub Actions workflow to register
+    headers = {
+        "Authorization": f"Bearer {GITHUB_TOKEN}",
+        "Accept": "application/vnd.github+json"
+    }
+    url = f"https://api.github.com/repos/{GITHUB_REPO}/actions/runs"
+
+    poll_start = time.time()
+    max_wait_seconds = 180  # 3 minutes maximum timeout
+
+    while time.time() - poll_start < max_wait_seconds:
+        try:
+            r = requests.get(url, headers=headers, timeout=10)
+            if r.status_code == 200:
+                runs = r.json().get("workflow_runs", [])
+                if runs:
+                    latest = runs[0]
+                    status = latest.get("status")
+                    conclusion = latest.get("conclusion")
+
+                    if status == "completed":
+                        if conclusion == "success":
+                            msg = (
+                                f"🚀 *Deployment Live on GitHub Pages!*\n\n"
+                                f"Changes for *\"{title_msg}\"* are now deployed and live on the web:\n\n"
+                                f"🌐 [Open Portfolio](https://gateway-ne.github.io/DineshK_Portfolio/)\n"
+                                f"📄 [Open Resume](https://gateway-ne.github.io/DineshK_Portfolio/resume.html)"
+                            )
+                            bot.send_message(chat_id, msg)
+                            return
+                        else:
+                            bot.send_message(chat_id, f"⚠️ *Deployment completed with status:* `{conclusion}`")
+                            return
+        except Exception as e:
+            print(f"[BOT] Monitor error: {e}")
+
+        time.sleep(7)
+
 class TelegramBot:
     def __init__(self, token):
         self.token = token
         self.api_url = f"https://api.telegram.org/bot{token}"
         self.offset = 0
+
+    def trigger_update_and_notify(self, chat_id, data, title_msg):
+        """Saves, syncs, pushes, notifies user immediately, and monitors live deployment."""
+        save_and_sync(data, title_msg)
+        
+        # Immediate notification
+        immediate_text = (
+            f"✅ *Update Applied!*\n\n"
+            f"• *Action:* {title_msg}\n"
+            f"• *Status:* Saved & synchronized locally.\n"
+            f"• *Deployment:* ⏳ Pushed to GitHub! Building & deploying to live site (~45-60s)...\n\n"
+            f"_You will receive another message here as soon as deployment finishes._"
+        )
+        self.send_message(chat_id, immediate_text)
+
+        # Background deployment watcher
+        threading.Thread(target=monitor_github_deployment, args=(self, chat_id, title_msg), daemon=True).start()
 
     def send_message(self, chat_id, text, reply_markup=None):
         markup = reply_markup if reply_markup else DASHBOARD_REPLY_KEYBOARD
@@ -355,7 +415,6 @@ class TelegramBot:
             [{"text": f"➕ Add New Skill", "callback_data": f"add_skill_{cat_key}"}]
         ]
         
-        # Add 1-click delete buttons for every skill
         del_row = []
         for idx, s in enumerate(skills):
             del_row.append({"text": f"❌ {s.get('name', '')[:14]}", "callback_data": f"del_skill_{cat_key}_{idx}"})
@@ -557,8 +616,7 @@ class TelegramBot:
                 self.send_message(chat_id, "❌ data.json not found.")
         elif data_str == "action_resync":
             d = load_data()
-            save_and_sync(d, "Force re-sync via Telegram Bot")
-            self.send_message(chat_id, "⚡ *Portfolio and Resume re-synchronized and deployed successfully!*")
+            self.trigger_update_and_notify(chat_id, d, "Force re-sync portfolio & resume")
 
         # Profile Edits
         elif data_str == "edit_prof_exp":
@@ -610,8 +668,8 @@ class TelegramBot:
             d = load_data()
             if cat_key in d.get("skills", {}) and s_idx < len(d["skills"][cat_key]):
                 removed = d["skills"][cat_key].pop(s_idx)
-                save_and_sync(d, f"Remove skill {removed.get('name')} via Telegram")
-                self.show_skills_category(chat_id, cat_key, message_id)
+                self.trigger_update_and_notify(chat_id, d, f"Removed skill '{removed.get('name')}' from {cat_key}")
+                self.show_skills_category(chat_id, cat_key)
 
         # Experience Projects Router
         elif data_str.startswith("view_proj_"):
@@ -624,8 +682,8 @@ class TelegramBot:
             d = load_data()
             if idx < len(d.get("projects", [])):
                 d["projects"][idx]["page"] = new_page
-                save_and_sync(d, f"Set project #{idx+1} to page {new_page}")
-                self.show_project_detail(chat_id, idx, message_id)
+                self.trigger_update_and_notify(chat_id, d, f"Moved Project #{idx+1} to Resume Page {new_page}")
+                self.show_project_detail(chat_id, idx)
         elif data_str.startswith("edit_proj_name_"):
             idx = int(data_str.replace("edit_proj_name_", ""))
             user_states[chat_id] = {"action": "set_proj_name", "idx": idx}
@@ -656,8 +714,7 @@ class TelegramBot:
             d = load_data()
             if idx < len(d.get("projects", [])):
                 del_p = d["projects"].pop(idx)
-                save_and_sync(d, f"Delete project {del_p.get('name')} via Telegram")
-                self.send_message(chat_id, f"🗑️ Deleted project *{del_p.get('name')}*.")
+                self.trigger_update_and_notify(chat_id, d, f"Deleted project '{del_p.get('name')}'")
                 self.show_projects_menu(chat_id)
         elif data_str == "action_add_project":
             user_states[chat_id] = {"action": "add_project_wizard"}
@@ -684,8 +741,8 @@ class TelegramBot:
                 new_status = "In Progress" if cur_status.lower() == "live" else "Live"
                 d["personalProjects"][idx]["status"] = new_status
                 d["personalProjects"][idx]["statusColor"] = "green" if new_status.lower() == "live" else "blue"
-                save_and_sync(d, f"Toggle {d['personalProjects'][idx].get('title')} to {new_status}")
-                self.show_personal_detail(chat_id, idx, message_id)
+                self.trigger_update_and_notify(chat_id, d, f"Toggled '{d['personalProjects'][idx].get('title')}' status to {new_status}")
+                self.show_personal_detail(chat_id, idx)
         elif data_str.startswith("edit_pers_title_"):
             idx = int(data_str.replace("edit_pers_title_", ""))
             user_states[chat_id] = {"action": "set_pers_title", "idx": idx}
@@ -711,8 +768,7 @@ class TelegramBot:
             d = load_data()
             if idx < len(d.get("personalProjects", [])):
                 del_p = d["personalProjects"].pop(idx)
-                save_and_sync(d, f"Delete personal project {del_p.get('title')} via Telegram")
-                self.send_message(chat_id, f"🗑️ Deleted personal project *{del_p.get('title')}*.")
+                self.trigger_update_and_notify(chat_id, d, f"Deleted personal project '{del_p.get('title')}'")
                 self.show_personal_menu(chat_id)
         elif data_str == "action_add_personal":
             user_states[chat_id] = {"action": "add_pers_wizard"}
@@ -744,15 +800,13 @@ class TelegramBot:
             if action == "set_prof_exp":
                 datetime.strptime(text, "%Y-%m-%d")
                 d["personal"]["experienceStartDate"] = text
-                save_and_sync(d, f"Update experienceStartDate to {text}")
                 calc_exp = calculate_experience(text)
-                self.send_message(chat_id, f"✅ Experience date updated to `{text}` (*{calc_exp}*)!")
+                self.trigger_update_and_notify(chat_id, d, f"Updated Experience Start Date to {text} ({calc_exp})")
                 self.show_profile_menu(chat_id)
                 return True
             elif action == "set_prof_title":
                 d["personal"]["title"] = text
-                save_and_sync(d, f"Update title to {text}")
-                self.send_message(chat_id, f"✅ Job title updated to *{text}*!")
+                self.trigger_update_and_notify(chat_id, d, f"Updated Job Title to '{text}'")
                 self.show_profile_menu(chat_id)
                 return True
             elif action == "set_prof_name":
@@ -760,39 +814,33 @@ class TelegramBot:
                 parts = text.split(maxsplit=1)
                 d["personal"]["firstName"] = parts[0]
                 d["personal"]["lastName"] = parts[1] if len(parts) > 1 else ""
-                save_and_sync(d, f"Update name to {text}")
-                self.send_message(chat_id, f"✅ Name updated to *{text}*!")
+                self.trigger_update_and_notify(chat_id, d, f"Updated Name to '{text}'")
                 self.show_profile_menu(chat_id)
                 return True
             elif action == "set_prof_phone":
                 d["personal"]["phone"] = text
-                save_and_sync(d, f"Update phone to {text}")
-                self.send_message(chat_id, f"✅ Phone updated to `{text}`!")
+                self.trigger_update_and_notify(chat_id, d, f"Updated Phone to '{text}'")
                 self.show_profile_menu(chat_id)
                 return True
             elif action == "set_prof_email":
                 d["personal"]["email"] = text
-                save_and_sync(d, f"Update email to {text}")
-                self.send_message(chat_id, f"✅ Email updated to `{text}`!")
+                self.trigger_update_and_notify(chat_id, d, f"Updated Email to '{text}'")
                 self.show_profile_menu(chat_id)
                 return True
             elif action == "set_prof_linkedin":
                 d["personal"]["linkedin"] = text
                 d["personal"]["linkedinDisplay"] = text.replace("https://", "").replace("www.", "")
-                save_and_sync(d, f"Update LinkedIn to {text}")
-                self.send_message(chat_id, f"✅ LinkedIn updated to `{text}`!")
+                self.trigger_update_and_notify(chat_id, d, f"Updated LinkedIn URL")
                 self.show_profile_menu(chat_id)
                 return True
             elif action == "set_prof_location":
                 d["personal"]["location"] = text
-                save_and_sync(d, f"Update location to {text}")
-                self.send_message(chat_id, f"✅ Location updated to *{text}*!")
+                self.trigger_update_and_notify(chat_id, d, f"Updated Location to '{text}'")
                 self.show_profile_menu(chat_id)
                 return True
             elif action == "set_prof_client":
                 d["personal"]["client"] = text
-                save_and_sync(d, f"Update client to {text}")
-                self.send_message(chat_id, f"✅ Client updated to *{text}*!")
+                self.trigger_update_and_notify(chat_id, d, f"Updated Client Engagement to '{text}'")
                 self.show_profile_menu(chat_id)
                 return True
 
@@ -801,8 +849,7 @@ class TelegramBot:
                 cat_key = state.get("cat_key")
                 icon = text[:3].upper()
                 d["skills"][cat_key].append({"name": text, "icon": icon})
-                save_and_sync(d, f"Add skill {text} to {cat_key}")
-                self.send_message(chat_id, f"✅ Added skill *{text}*!")
+                self.trigger_update_and_notify(chat_id, d, f"Added skill '{text}' to {cat_key}")
                 self.show_skills_category(chat_id, cat_key)
                 return True
 
@@ -810,22 +857,19 @@ class TelegramBot:
             elif action == "set_proj_name":
                 idx = state.get("idx")
                 d["projects"][idx]["name"] = text
-                save_and_sync(d, f"Update project #{idx+1} name to {text}")
-                self.send_message(chat_id, f"✅ Project name updated to *{text}*!")
+                self.trigger_update_and_notify(chat_id, d, f"Updated Project #{idx+1} name to '{text}'")
                 self.show_project_detail(chat_id, idx)
                 return True
             elif action == "set_proj_period":
                 idx = state.get("idx")
                 d["projects"][idx]["period"] = text
-                save_and_sync(d, f"Update project #{idx+1} period to {text}")
-                self.send_message(chat_id, f"✅ Project period updated to *{text}*!")
+                self.trigger_update_and_notify(chat_id, d, f"Updated Project #{idx+1} period to '{text}'")
                 self.show_project_detail(chat_id, idx)
                 return True
             elif action == "set_proj_role":
                 idx = state.get("idx")
                 d["projects"][idx]["role"] = text
-                save_and_sync(d, f"Update project #{idx+1} role to {text}")
-                self.send_message(chat_id, f"✅ Project role updated to *{text}*!")
+                self.trigger_update_and_notify(chat_id, d, f"Updated Project #{idx+1} role to '{text}'")
                 self.show_project_detail(chat_id, idx)
                 return True
             elif action == "set_proj_tech":
@@ -833,16 +877,14 @@ class TelegramBot:
                 tags = [t.strip() for t in text.split(",") if t.strip()]
                 d["projects"][idx]["techTags"] = tags
                 d["projects"][idx]["techResume"] = ", ".join(tags)
-                save_and_sync(d, f"Update project #{idx+1} tech tags")
-                self.send_message(chat_id, f"✅ Tech tags updated to *{', '.join(tags)}*!")
+                self.trigger_update_and_notify(chat_id, d, f"Updated Project #{idx+1} tech tags")
                 self.show_project_detail(chat_id, idx)
                 return True
             elif action == "set_proj_bullets":
                 idx = state.get("idx")
                 bullets = [b.strip() for b in text.split("\n") if b.strip()]
                 d["projects"][idx]["bullets"] = bullets
-                save_and_sync(d, f"Update project #{idx+1} bullets")
-                self.send_message(chat_id, f"✅ Saved {len(bullets)} bullets for this project!")
+                self.trigger_update_and_notify(chat_id, d, f"Updated Project #{idx+1} bullets")
                 self.show_project_detail(chat_id, idx)
                 return True
             elif action == "add_project_wizard":
@@ -865,8 +907,7 @@ class TelegramBot:
                     "bullets": [f"Implemented PLM solutions for {name}."]
                 }
                 d["projects"].insert(0, new_proj)
-                save_and_sync(d, f"Add project {name}")
-                self.send_message(chat_id, f"✅ Added new project *{name}*!")
+                self.trigger_update_and_notify(chat_id, d, f"Added new project '{name}'")
                 self.show_projects_menu(chat_id)
                 return True
 
@@ -874,29 +915,25 @@ class TelegramBot:
             elif action == "set_pers_title":
                 idx = state.get("idx")
                 d["personalProjects"][idx]["title"] = text
-                save_and_sync(d, f"Update personal project title to {text}")
-                self.send_message(chat_id, f"✅ Personal project title updated to *{text}*!")
+                self.trigger_update_and_notify(chat_id, d, f"Updated personal project title to '{text}'")
                 self.show_personal_detail(chat_id, idx)
                 return True
             elif action == "set_pers_url":
                 idx = state.get("idx")
                 d["personalProjects"][idx]["url"] = text
-                save_and_sync(d, f"Update personal project URL")
-                self.send_message(chat_id, f"✅ URL updated to `{text}`!")
+                self.trigger_update_and_notify(chat_id, d, f"Updated personal project URL to '{text}'")
                 self.show_personal_detail(chat_id, idx)
                 return True
             elif action == "set_pers_btn":
                 idx = state.get("idx")
                 d["personalProjects"][idx]["buttonText"] = text
-                save_and_sync(d, f"Update personal project button text")
-                self.send_message(chat_id, f"✅ Button text updated to `{text}`!")
+                self.trigger_update_and_notify(chat_id, d, f"Updated button text to '{text}'")
                 self.show_personal_detail(chat_id, idx)
                 return True
             elif action == "set_pers_desc":
                 idx = state.get("idx")
                 d["personalProjects"][idx]["description"] = text
-                save_and_sync(d, f"Update personal project description")
-                self.send_message(chat_id, f"✅ Description updated!")
+                self.trigger_update_and_notify(chat_id, d, f"Updated personal project description")
                 self.show_personal_detail(chat_id, idx)
                 return True
             elif action == "add_pers_wizard":
@@ -917,8 +954,7 @@ class TelegramBot:
                     "tech": ["HTML", "JavaScript", "Python"]
                 }
                 d["personalProjects"].append(new_p)
-                save_and_sync(d, f"Add personal project {title}")
-                self.send_message(chat_id, f"✅ Added personal project *{title}*!")
+                self.trigger_update_and_notify(chat_id, d, f"Added personal project '{title}'")
                 self.show_personal_menu(chat_id)
                 return True
 
@@ -963,15 +999,10 @@ class TelegramBot:
                         if "personal" not in new_data or "projects" not in new_data:
                             raise ValueError("Missing 'personal' or 'projects' root keys.")
                         
-                        save_and_sync(new_data, "Update data.json via direct Telegram upload")
                         if temp_path.exists():
                             temp_path.unlink()
                         
-                        self.send_message(
-                            chat_id,
-                            "✅ *Success!* Updated `data.json` applied.\n\n"
-                            "Both your *Portfolio* and *Resume* have been automatically synchronized and deployed!"
-                        )
+                        self.trigger_update_and_notify(chat_id, new_data, "Uploaded new data.json file")
                         self.show_main_menu(chat_id)
                         return
                     except Exception as e:
@@ -1005,8 +1036,7 @@ class TelegramBot:
                 self.send_document(chat_id, DATA_PATH, caption="📄 Current data.json configuration")
         elif text == "⚡ Force Re-Sync" or text == "/sync":
             d = load_data()
-            save_and_sync(d, "Force re-sync via Telegram Bot")
-            self.send_message(chat_id, "⚡ *Portfolio and Resume re-synchronized and deployed successfully!*")
+            self.trigger_update_and_notify(chat_id, d, "Force re-sync portfolio & resume")
         elif text == "📊 Live Status" or text == "/status":
             d = load_data()
             p = d.get("personal", {})
@@ -1025,7 +1055,7 @@ class TelegramBot:
             self.show_main_menu(chat_id)
 
     def run(self):
-        print("[BOT] Button-driven Dinesh K Portfolio Telegram Bot running...")
+        print("[BOT] Button-driven Dinesh K Portfolio Telegram Bot running with Live Deployment Monitoring...")
         print("[BOT] Press Ctrl+C to stop.")
         while True:
             try:
