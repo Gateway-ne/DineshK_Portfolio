@@ -2,11 +2,12 @@
 """
 bot.py - Button-Driven Telegram Admin Bot for Dinesh K's Portfolio & Resume
 
-Features:
-- Persistent Bottom Keyboard (always docked above chat input)
-- Interactive Inline Buttons for all actions & fields
-- Instant update confirmation message on every change
-- Automatic GitHub Actions deployment watcher: messages user as soon as deployment finishes!
+Batch Deployment Workflow:
+- Make as many edits as you want (Profile, Skills, Projects, Personal Projects).
+- All edits are saved and compiled locally immediately.
+- Nothing is deployed to GitHub until you tap "🚀 Deploy All Changes"!
+- When you tap "🚀 Deploy All Changes", all edits are pushed together in one go,
+  and you get a notification when live deployment finishes.
 """
 
 import base64
@@ -39,6 +40,7 @@ GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "").strip()
 GITHUB_REPO = os.environ.get("GITHUB_REPO", "Gateway-ne/DineshK_Portfolio").strip()
 
 DATA_PATH = BASE_DIR / "data.json"
+PENDING_CHANGES_FILE = BASE_DIR / "pending_changes.json"
 
 GIT_CANDIDATES = [
     r"C:\Users\MSI\AppData\Local\GitHubDesktop\app-3.6.5\resources\app\git\cmd\git.exe",
@@ -58,12 +60,38 @@ DASHBOARD_REPLY_KEYBOARD = {
     "keyboard": [
         [{"text": "👤 Profile & Bio"}, {"text": "🛠️ Skills Manager"}],
         [{"text": "💼 Experience Projects"}, {"text": "🚀 Personal Projects"}],
-        [{"text": "📄 Download data.json"}, {"text": "⚡ Force Re-Sync"}],
+        [{"text": "🚀 Deploy All Changes"}, {"text": "📄 Download data.json"}],
         [{"text": "📊 Live Status"}, {"text": "📋 Main Dashboard"}]
     ],
     "resize_keyboard": True,
     "is_persistent": True
 }
+
+# =============================================================================
+# Pending Changes Tracker
+# =============================================================================
+
+def get_pending_changes():
+    if PENDING_CHANGES_FILE.exists():
+        try:
+            with open(PENDING_CHANGES_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return []
+    return []
+
+def add_pending_change(desc):
+    changes = get_pending_changes()
+    changes.append({"desc": desc, "time": datetime.now().strftime("%H:%M:%S")})
+    with open(PENDING_CHANGES_FILE, "w", encoding="utf-8") as f:
+        json.dump(changes, f, indent=2)
+
+def clear_pending_changes():
+    if PENDING_CHANGES_FILE.exists():
+        try:
+            PENDING_CHANGES_FILE.unlink()
+        except Exception:
+            pass
 
 def calculate_experience(start_date_str):
     try:
@@ -83,7 +111,8 @@ def load_data():
     with open(DATA_PATH, "r", encoding="utf-8") as f:
         return json.load(f)
 
-def save_and_sync(data, commit_msg="Auto-update portfolio via Telegram Bot"):
+def save_data_locally(data, description):
+    """Saves data.json, recompiles HTML, and logs as a pending change without pushing to GitHub."""
     # 1. Save data.json locally
     with open(DATA_PATH, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
@@ -92,10 +121,14 @@ def save_and_sync(data, commit_msg="Auto-update portfolio via Telegram Bot"):
     import sync
     sync.sync()
 
-    # 3. Commit locally and push to GitHub using GITHUB_TOKEN
+    # 3. Track pending change
+    add_pending_change(description)
+
+def push_pending_to_github(commit_msg):
+    """Commits and pushes all pending changes to GitHub."""
+    git_cmd = get_git_executable()
     pushed = False
     try:
-        git_cmd = get_git_executable()
         subprocess.run([git_cmd, "add", "data.json", "index.html", "resume.html"], cwd=str(BASE_DIR), capture_output=True, text=True)
         subprocess.run([git_cmd, "commit", "-m", commit_msg], cwd=str(BASE_DIR), capture_output=True, text=True)
         
@@ -108,44 +141,41 @@ def save_and_sync(data, commit_msg="Auto-update portfolio via Telegram Bot"):
             else:
                 print(f"[BOT] Git push note: {push_res.stderr}")
     except Exception as e:
-        print(f"[BOT] Local git commit/push note: {e}")
+        print(f"[BOT] Git commit/push note: {e}")
 
-    # 4. If git push didn't succeed, fallback to GitHub REST API
+    # Fallback to GitHub REST API if git push didn't execute
     if GITHUB_TOKEN and not pushed:
-        push_to_github(data, commit_msg)
+        try:
+            data = load_data()
+            url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/data.json"
+            headers = {
+                "Authorization": f"Bearer {GITHUB_TOKEN}",
+                "Accept": "application/vnd.github+json"
+            }
+            r = requests.get(url, headers=headers, timeout=10)
+            sha = r.json().get("sha") if r.status_code == 200 else None
 
-def push_to_github(data, commit_msg):
-    try:
-        url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/data.json"
-        headers = {
-            "Authorization": f"Bearer {GITHUB_TOKEN}",
-            "Accept": "application/vnd.github+json"
-        }
-        r = requests.get(url, headers=headers, timeout=10)
-        sha = r.json().get("sha") if r.status_code == 200 else None
+            content_bytes = json.dumps(data, indent=2, ensure_ascii=False).encode("utf-8")
+            payload = {
+                "message": f"{commit_msg} [skip ci]",
+                "content": base64.b64encode(content_bytes).decode("utf-8")
+            }
+            if sha:
+                payload["sha"] = sha
 
-        content_bytes = json.dumps(data, indent=2, ensure_ascii=False).encode("utf-8")
-        payload = {
-            "message": f"{commit_msg} [skip ci]",
-            "content": base64.b64encode(content_bytes).decode("utf-8")
-        }
-        if sha:
-            payload["sha"] = sha
+            requests.put(url, headers=headers, json=payload, timeout=15)
+            pushed = True
+        except Exception as e:
+            print(f"[BOT] GitHub API fallback note: {e}")
 
-        put_res = requests.put(url, headers=headers, json=payload, timeout=15)
-        if put_res.status_code in (200, 201):
-            print("[BOT] Successfully committed to GitHub via REST API!")
-        else:
-            print(f"[BOT] GitHub API warning ({put_res.status_code}): {put_res.text}")
-    except Exception as e:
-        print(f"[BOT] GitHub API error: {e}")
+    return pushed
 
-def monitor_github_deployment(bot, chat_id, title_msg):
-    """Monitors GitHub Actions run in background and alerts the user when live deployment completes."""
+def monitor_github_deployment(bot, chat_id, summary_text):
+    """Monitors GitHub Actions in the background and sends a message when deployment finishes."""
     if not GITHUB_TOKEN:
         return
 
-    time.sleep(6)  # Brief delay to allow GitHub Actions workflow to register
+    time.sleep(6)
     headers = {
         "Authorization": f"Bearer {GITHUB_TOKEN}",
         "Accept": "application/vnd.github+json"
@@ -153,7 +183,7 @@ def monitor_github_deployment(bot, chat_id, title_msg):
     url = f"https://api.github.com/repos/{GITHUB_REPO}/actions/runs"
 
     poll_start = time.time()
-    max_wait_seconds = 180  # 3 minutes maximum timeout
+    max_wait_seconds = 180
 
     while time.time() - poll_start < max_wait_seconds:
         try:
@@ -168,10 +198,11 @@ def monitor_github_deployment(bot, chat_id, title_msg):
                     if status == "completed":
                         if conclusion == "success":
                             msg = (
-                                f"🚀 *Deployment Live on GitHub Pages!*\n\n"
-                                f"Changes for *\"{title_msg}\"* are now deployed and live on the web:\n\n"
-                                f"🌐 [Open Portfolio](https://gateway-ne.github.io/DineshK_Portfolio/)\n"
-                                f"📄 [Open Resume](https://gateway-ne.github.io/DineshK_Portfolio/resume.html)"
+                                f"🎉 *Deployment Succeeded!*\n\n"
+                                f"All your updates are now live on GitHub Pages:\n"
+                                f"• {summary_text}\n\n"
+                                f"🌐 [Open Live Portfolio](https://gateway-ne.github.io/DineshK_Portfolio/)\n"
+                                f"📄 [Open Live Resume](https://gateway-ne.github.io/DineshK_Portfolio/resume.html)"
                             )
                             bot.send_message(chat_id, msg)
                             return
@@ -189,22 +220,51 @@ class TelegramBot:
         self.api_url = f"https://api.telegram.org/bot{token}"
         self.offset = 0
 
-    def trigger_update_and_notify(self, chat_id, data, title_msg):
-        """Saves, syncs, pushes, notifies user immediately, and monitors live deployment."""
-        save_and_sync(data, title_msg)
+    def trigger_local_update(self, chat_id, data, desc):
+        """Saves changes locally without deploying, prompts user to deploy when ready."""
+        save_data_locally(data, desc)
+        pending = get_pending_changes()
         
-        # Immediate notification
-        immediate_text = (
-            f"✅ *Update Applied!*\n\n"
-            f"• *Action:* {title_msg}\n"
-            f"• *Status:* Saved & synchronized locally.\n"
-            f"• *Deployment:* ⏳ Pushed to GitHub! Building & deploying to live site (~45-60s)...\n\n"
-            f"_You will receive another message here as soon as deployment finishes._"
+        text = (
+            f"✅ *Saved Locally!*\n\n"
+            f"• *Change:* {desc}\n"
+            f"• *Pending changes to deploy:* `{len(pending)}`\n\n"
+            f"💡 *You can keep making more edits!* When you are ready to publish all changes to your live website, tap **🚀 Deploy All Changes** below."
         )
-        self.send_message(chat_id, immediate_text)
+        self.send_message(chat_id, text)
 
-        # Background deployment watcher
-        threading.Thread(target=monitor_github_deployment, args=(self, chat_id, title_msg), daemon=True).start()
+    def deploy_pending_changes(self, chat_id, force=False):
+        """Pushes all pending edits to GitHub Cloud in one single deployment."""
+        pending = get_pending_changes()
+        
+        if not pending and not force:
+            self.send_message(
+                chat_id,
+                "✨ *No pending changes to deploy!*\n\n"
+                "Your live website is already up to date with your latest edits.\n\n"
+                "To publish new edits, make changes to Profile, Skills, or Projects first.",
+                {"inline_keyboard": [[{"text": "⚡ Force Re-Deploy Anyway", "callback_data": "action_force_deploy"}]]}
+            )
+            return
+
+        change_list_str = "\n".join([f"• {c['desc']}" for c in pending]) if pending else "• Manual full sync"
+        commit_msg = f"Deploy {len(pending)} updates via Telegram Bot" if pending else "Manual sync via Telegram Bot"
+
+        # Push to GitHub
+        push_pending_to_github(commit_msg)
+        clear_pending_changes()
+
+        # Immediate feedback
+        self.send_message(
+            chat_id,
+            f"🚀 *Deploying to Live Website...*\n\n"
+            f"*Changes included:*\n{change_list_str}\n\n"
+            f"⏳ Pushed to GitHub! Building & deploying to live site (~45-60s)...\n"
+            f"_You will receive a notification here as soon as deployment finishes._"
+        )
+
+        # Watcher
+        threading.Thread(target=monitor_github_deployment, args=(self, chat_id, change_list_str), daemon=True).start()
 
     def send_message(self, chat_id, text, reply_markup=None):
         markup = reply_markup if reply_markup else DASHBOARD_REPLY_KEYBOARD
@@ -287,14 +347,20 @@ class TelegramBot:
         data = load_data()
         p = data.get("personal", {})
         exp_calc = calculate_experience(p.get("experienceStartDate", ""))
+        pending = get_pending_changes()
         
+        pending_str = f"⚠️ *Pending Changes:* `{len(pending)}` (Not yet deployed)" if pending else "✅ *Live Status:* Up to date"
+
         text = (
             f"⚡ *Dinesh K — Portfolio Admin Dashboard*\n\n"
             f"👤 *{p.get('name', 'Dinesh K')}* | {p.get('title', '')}\n"
             f"📅 *Experience:* `{p.get('experienceStartDate', '')}` (*{exp_calc}*)\n"
-            f"📁 *Experience Projects:* {len(data.get('projects', []))} | *Personal Projects:* {len(data.get('personalProjects', []))}\n\n"
+            f"📁 *Experience Projects:* {len(data.get('projects', []))} | *Personal Projects:* {len(data.get('personalProjects', []))}\n"
+            f"{pending_str}\n\n"
             f"Tap any button below to manage your portfolio:"
         )
+
+        deploy_btn_text = f"🚀 Deploy All Changes ({len(pending)})" if pending else "🚀 Deploy All Changes"
 
         keyboard = {
             "inline_keyboard": [
@@ -307,8 +373,10 @@ class TelegramBot:
                     {"text": "🚀 Personal Projects", "callback_data": "menu_personal"}
                 ],
                 [
-                    {"text": "📄 Download data.json", "callback_data": "action_get_data"},
-                    {"text": "⚡ Force Re-Sync", "callback_data": "action_resync"}
+                    {"text": deploy_btn_text, "callback_data": "action_deploy_now"}
+                ],
+                [
+                    {"text": "📄 Download data.json", "callback_data": "action_get_data"}
                 ]
             ]
         }
@@ -615,9 +683,10 @@ class TelegramBot:
                 self.send_document(chat_id, DATA_PATH, caption="📄 Current data.json configuration")
             else:
                 self.send_message(chat_id, "❌ data.json not found.")
-        elif data_str == "action_resync":
-            d = load_data()
-            self.trigger_update_and_notify(chat_id, d, "Force re-sync portfolio & resume")
+        elif data_str == "action_deploy_now":
+            self.deploy_pending_changes(chat_id)
+        elif data_str == "action_force_deploy":
+            self.deploy_pending_changes(chat_id, force=True)
 
         # Profile Edits
         elif data_str == "edit_prof_exp":
@@ -669,7 +738,7 @@ class TelegramBot:
             d = load_data()
             if cat_key in d.get("skills", {}) and s_idx < len(d["skills"][cat_key]):
                 removed = d["skills"][cat_key].pop(s_idx)
-                self.trigger_update_and_notify(chat_id, d, f"Removed skill '{removed.get('name')}' from {cat_key}")
+                self.trigger_local_update(chat_id, d, f"Removed skill '{removed.get('name')}' from {cat_key}")
                 self.show_skills_category(chat_id, cat_key)
 
         # Experience Projects Router
@@ -683,7 +752,7 @@ class TelegramBot:
             d = load_data()
             if idx < len(d.get("projects", [])):
                 d["projects"][idx]["page"] = new_page
-                self.trigger_update_and_notify(chat_id, d, f"Moved Project #{idx+1} to Resume Page {new_page}")
+                self.trigger_local_update(chat_id, d, f"Moved Project #{idx+1} to Resume Page {new_page}")
                 self.show_project_detail(chat_id, idx)
         elif data_str.startswith("edit_proj_name_"):
             idx = int(data_str.replace("edit_proj_name_", ""))
@@ -715,7 +784,7 @@ class TelegramBot:
             d = load_data()
             if idx < len(d.get("projects", [])):
                 del_p = d["projects"].pop(idx)
-                self.trigger_update_and_notify(chat_id, d, f"Deleted project '{del_p.get('name')}'")
+                self.trigger_local_update(chat_id, d, f"Deleted project '{del_p.get('name')}'")
                 self.show_projects_menu(chat_id)
         elif data_str == "action_add_project":
             user_states[chat_id] = {"action": "add_project_wizard"}
@@ -742,7 +811,7 @@ class TelegramBot:
                 new_status = "In Progress" if cur_status.lower() == "live" else "Live"
                 d["personalProjects"][idx]["status"] = new_status
                 d["personalProjects"][idx]["statusColor"] = "green" if new_status.lower() == "live" else "blue"
-                self.trigger_update_and_notify(chat_id, d, f"Toggled '{d['personalProjects'][idx].get('title')}' status to {new_status}")
+                self.trigger_local_update(chat_id, d, f"Toggled '{d['personalProjects'][idx].get('title')}' status to {new_status}")
                 self.show_personal_detail(chat_id, idx)
         elif data_str.startswith("edit_pers_title_"):
             idx = int(data_str.replace("edit_pers_title_", ""))
@@ -769,7 +838,7 @@ class TelegramBot:
             d = load_data()
             if idx < len(d.get("personalProjects", [])):
                 del_p = d["personalProjects"].pop(idx)
-                self.trigger_update_and_notify(chat_id, d, f"Deleted personal project '{del_p.get('title')}'")
+                self.trigger_local_update(chat_id, d, f"Deleted personal project '{del_p.get('title')}'")
                 self.show_personal_menu(chat_id)
         elif data_str == "action_add_personal":
             user_states[chat_id] = {"action": "add_pers_wizard"}
@@ -802,12 +871,12 @@ class TelegramBot:
                 datetime.strptime(text, "%Y-%m-%d")
                 d["personal"]["experienceStartDate"] = text
                 calc_exp = calculate_experience(text)
-                self.trigger_update_and_notify(chat_id, d, f"Updated Experience Start Date to {text} ({calc_exp})")
+                self.trigger_local_update(chat_id, d, f"Updated Experience Start Date to {text} ({calc_exp})")
                 self.show_profile_menu(chat_id)
                 return True
             elif action == "set_prof_title":
                 d["personal"]["title"] = text
-                self.trigger_update_and_notify(chat_id, d, f"Updated Job Title to '{text}'")
+                self.trigger_local_update(chat_id, d, f"Updated Job Title to '{text}'")
                 self.show_profile_menu(chat_id)
                 return True
             elif action == "set_prof_name":
@@ -815,33 +884,33 @@ class TelegramBot:
                 parts = text.split(maxsplit=1)
                 d["personal"]["firstName"] = parts[0]
                 d["personal"]["lastName"] = parts[1] if len(parts) > 1 else ""
-                self.trigger_update_and_notify(chat_id, d, f"Updated Name to '{text}'")
+                self.trigger_local_update(chat_id, d, f"Updated Name to '{text}'")
                 self.show_profile_menu(chat_id)
                 return True
             elif action == "set_prof_phone":
                 d["personal"]["phone"] = text
-                self.trigger_update_and_notify(chat_id, d, f"Updated Phone to '{text}'")
+                self.trigger_local_update(chat_id, d, f"Updated Phone to '{text}'")
                 self.show_profile_menu(chat_id)
                 return True
             elif action == "set_prof_email":
                 d["personal"]["email"] = text
-                self.trigger_update_and_notify(chat_id, d, f"Updated Email to '{text}'")
+                self.trigger_local_update(chat_id, d, f"Updated Email to '{text}'")
                 self.show_profile_menu(chat_id)
                 return True
             elif action == "set_prof_linkedin":
                 d["personal"]["linkedin"] = text
                 d["personal"]["linkedinDisplay"] = text.replace("https://", "").replace("www.", "")
-                self.trigger_update_and_notify(chat_id, d, f"Updated LinkedIn URL")
+                self.trigger_local_update(chat_id, d, f"Updated LinkedIn URL")
                 self.show_profile_menu(chat_id)
                 return True
             elif action == "set_prof_location":
                 d["personal"]["location"] = text
-                self.trigger_update_and_notify(chat_id, d, f"Updated Location to '{text}'")
+                self.trigger_local_update(chat_id, d, f"Updated Location to '{text}'")
                 self.show_profile_menu(chat_id)
                 return True
             elif action == "set_prof_client":
                 d["personal"]["client"] = text
-                self.trigger_update_and_notify(chat_id, d, f"Updated Client Engagement to '{text}'")
+                self.trigger_local_update(chat_id, d, f"Updated Client Engagement to '{text}'")
                 self.show_profile_menu(chat_id)
                 return True
 
@@ -850,7 +919,7 @@ class TelegramBot:
                 cat_key = state.get("cat_key")
                 icon = text[:3].upper()
                 d["skills"][cat_key].append({"name": text, "icon": icon})
-                self.trigger_update_and_notify(chat_id, d, f"Added skill '{text}' to {cat_key}")
+                self.trigger_local_update(chat_id, d, f"Added skill '{text}' to {cat_key}")
                 self.show_skills_category(chat_id, cat_key)
                 return True
 
@@ -858,19 +927,19 @@ class TelegramBot:
             elif action == "set_proj_name":
                 idx = state.get("idx")
                 d["projects"][idx]["name"] = text
-                self.trigger_update_and_notify(chat_id, d, f"Updated Project #{idx+1} name to '{text}'")
+                self.trigger_local_update(chat_id, d, f"Updated Project #{idx+1} name to '{text}'")
                 self.show_project_detail(chat_id, idx)
                 return True
             elif action == "set_proj_period":
                 idx = state.get("idx")
                 d["projects"][idx]["period"] = text
-                self.trigger_update_and_notify(chat_id, d, f"Updated Project #{idx+1} period to '{text}'")
+                self.trigger_local_update(chat_id, d, f"Updated Project #{idx+1} period to '{text}'")
                 self.show_project_detail(chat_id, idx)
                 return True
             elif action == "set_proj_role":
                 idx = state.get("idx")
                 d["projects"][idx]["role"] = text
-                self.trigger_update_and_notify(chat_id, d, f"Updated Project #{idx+1} role to '{text}'")
+                self.trigger_local_update(chat_id, d, f"Updated Project #{idx+1} role to '{text}'")
                 self.show_project_detail(chat_id, idx)
                 return True
             elif action == "set_proj_tech":
@@ -878,14 +947,14 @@ class TelegramBot:
                 tags = [t.strip() for t in text.split(",") if t.strip()]
                 d["projects"][idx]["techTags"] = tags
                 d["projects"][idx]["techResume"] = ", ".join(tags)
-                self.trigger_update_and_notify(chat_id, d, f"Updated Project #{idx+1} tech tags")
+                self.trigger_local_update(chat_id, d, f"Updated Project #{idx+1} tech tags")
                 self.show_project_detail(chat_id, idx)
                 return True
             elif action == "set_proj_bullets":
                 idx = state.get("idx")
                 bullets = [b.strip() for b in text.split("\n") if b.strip()]
                 d["projects"][idx]["bullets"] = bullets
-                self.trigger_update_and_notify(chat_id, d, f"Updated Project #{idx+1} bullets")
+                self.trigger_local_update(chat_id, d, f"Updated Project #{idx+1} bullets")
                 self.show_project_detail(chat_id, idx)
                 return True
             elif action == "add_project_wizard":
@@ -908,7 +977,7 @@ class TelegramBot:
                     "bullets": [f"Implemented PLM solutions for {name}."]
                 }
                 d["projects"].insert(0, new_proj)
-                self.trigger_update_and_notify(chat_id, d, f"Added new project '{name}'")
+                self.trigger_local_update(chat_id, d, f"Added new project '{name}'")
                 self.show_projects_menu(chat_id)
                 return True
 
@@ -916,25 +985,25 @@ class TelegramBot:
             elif action == "set_pers_title":
                 idx = state.get("idx")
                 d["personalProjects"][idx]["title"] = text
-                self.trigger_update_and_notify(chat_id, d, f"Updated personal project title to '{text}'")
+                self.trigger_local_update(chat_id, d, f"Updated personal project title to '{text}'")
                 self.show_personal_detail(chat_id, idx)
                 return True
             elif action == "set_pers_url":
                 idx = state.get("idx")
                 d["personalProjects"][idx]["url"] = text
-                self.trigger_update_and_notify(chat_id, d, f"Updated personal project URL to '{text}'")
+                self.trigger_local_update(chat_id, d, f"Updated personal project URL to '{text}'")
                 self.show_personal_detail(chat_id, idx)
                 return True
             elif action == "set_pers_btn":
                 idx = state.get("idx")
                 d["personalProjects"][idx]["buttonText"] = text
-                self.trigger_update_and_notify(chat_id, d, f"Updated button text to '{text}'")
+                self.trigger_local_update(chat_id, d, f"Updated button text to '{text}'")
                 self.show_personal_detail(chat_id, idx)
                 return True
             elif action == "set_pers_desc":
                 idx = state.get("idx")
                 d["personalProjects"][idx]["description"] = text
-                self.trigger_update_and_notify(chat_id, d, f"Updated personal project description")
+                self.trigger_local_update(chat_id, d, f"Updated personal project description")
                 self.show_personal_detail(chat_id, idx)
                 return True
             elif action == "add_pers_wizard":
@@ -955,7 +1024,7 @@ class TelegramBot:
                     "tech": ["HTML", "JavaScript", "Python"]
                 }
                 d["personalProjects"].append(new_p)
-                self.trigger_update_and_notify(chat_id, d, f"Added personal project '{title}'")
+                self.trigger_local_update(chat_id, d, f"Added personal project '{title}'")
                 self.show_personal_menu(chat_id)
                 return True
 
@@ -1003,7 +1072,7 @@ class TelegramBot:
                         if temp_path.exists():
                             temp_path.unlink()
                         
-                        self.trigger_update_and_notify(chat_id, new_data, "Uploaded new data.json file")
+                        self.trigger_local_update(chat_id, new_data, "Uploaded new data.json file")
                         self.show_main_menu(chat_id)
                         return
                     except Exception as e:
@@ -1032,22 +1101,24 @@ class TelegramBot:
             self.show_projects_menu(chat_id)
         elif text == "🚀 Personal Projects" or text == "/personal":
             self.show_personal_menu(chat_id)
+        elif text == "🚀 Deploy All Changes" or text == "/deploy":
+            self.deploy_pending_changes(chat_id)
         elif text == "📄 Download data.json" or text == "/get_data":
             if DATA_PATH.exists():
                 self.send_document(chat_id, DATA_PATH, caption="📄 Current data.json configuration")
-        elif text == "⚡ Force Re-Sync" or text == "/sync":
-            d = load_data()
-            self.trigger_update_and_notify(chat_id, d, "Force re-sync portfolio & resume")
         elif text == "📊 Live Status" or text == "/status":
             d = load_data()
             p = d.get("personal", {})
             calc = calculate_experience(p.get("experienceStartDate", ""))
+            pending = get_pending_changes()
+            p_text = f"\n⚠️ Pending changes to deploy: *{len(pending)}*" if pending else "\n✅ Everything is deployed & live"
             self.send_message(
                 chat_id,
-                f"📊 *Live Status:*\n\n"
+                f"📊 *Portfolio Status:*\n\n"
                 f"👤 *{p.get('name')}* — {p.get('title')}\n"
                 f"📅 Experience: `{p.get('experienceStartDate')}` (*{calc}*)\n"
-                f"📁 Projects: {len(d.get('projects', []))} | Personal: {len(d.get('personalProjects', []))}\n"
+                f"📁 Projects: {len(d.get('projects', []))} | Personal: {len(d.get('personalProjects', []))}"
+                f"{p_text}\n\n"
                 f"🌐 https://gateway-ne.github.io/DineshK_Portfolio/"
             )
         elif text == "📋 Main Dashboard" or text == "/menu" or text == "/start":
@@ -1056,7 +1127,7 @@ class TelegramBot:
             self.show_main_menu(chat_id)
 
     def run(self):
-        print("[BOT] Button-driven Dinesh K Portfolio Telegram Bot running with Live Deployment Monitoring...")
+        print("[BOT] Button-driven Dinesh K Portfolio Telegram Bot running with Batch Deployment...")
         print("[BOT] Press Ctrl+C to stop.")
         while True:
             try:
