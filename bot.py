@@ -372,7 +372,10 @@ class TelegramBot:
         }
         try:
             r = requests.post(f"{self.api_url}/sendMessage", json=payload, timeout=10)
-            return r.json()
+            res = r.json()
+            if not res.get("ok"):
+                print(f"[BOT] Telegram API rejected sendMessage: {res}")
+            return res
         except Exception as e:
             print(f"[BOT] Send error: {e}")
             return None
@@ -388,7 +391,10 @@ class TelegramBot:
         if reply_markup:
             payload["reply_markup"] = json.dumps(reply_markup)
         try:
-            requests.post(f"{self.api_url}/editMessageText", json=payload, timeout=10)
+            r = requests.post(f"{self.api_url}/editMessageText", json=payload, timeout=10)
+            res = r.json()
+            if not res.get("ok"):
+                print(f"[BOT] Telegram API rejected editMessageText: {res}")
         except Exception as e:
             print(f"[BOT] Edit error: {e}")
 
