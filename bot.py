@@ -134,6 +134,18 @@ GITHUB_REPO = os.environ.get("GITHUB_REPO", "Gateway-ne/DineshK_Portfolio").stri
 DATA_PATH = BASE_DIR / "data.json"
 PENDING_CHANGES_FILE = BASE_DIR / "pending_changes.json"
 
+def is_filesystem_writable():
+    try:
+        test_path = BASE_DIR / ".write_test"
+        with open(test_path, "w") as f:
+            f.write("ok")
+        test_path.unlink()
+        return True
+    except Exception:
+        return False
+
+IS_SERVERLESS = bool(os.environ.get("VERCEL")) or not is_filesystem_writable()
+
 GIT_CANDIDATES = [
     r"C:\Users\MSI\AppData\Local\GitHubDesktop\app-3.6.5\resources\app\git\cmd\git.exe",
     r"C:\Program Files\Git\cmd\git.exe",
@@ -164,20 +176,23 @@ DASHBOARD_REPLY_KEYBOARD = {
 # =============================================================================
 
 def get_pending_changes():
+    # In serverless cloud (Vercel), read directly from GitHub API
+    if IS_SERVERLESS and GITHUB_TOKEN:
+        try:
+            url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/pending_changes.json"
+            headers = {"Authorization": f"Bearer {GITHUB_TOKEN}", "Accept": "application/vnd.github+json"}
+            r = requests.get(url, headers=headers, timeout=10)
+            if r.status_code == 200:
+                content = base64.b64decode(r.json()["content"]).decode("utf-8")
+                return json.loads(content)
+        except Exception as e:
+            print(f"[BOT] GitHub API get_pending_changes note: {e}")
+
+    # Local mode fallback
     if PENDING_CHANGES_FILE.exists():
         try:
             with open(PENDING_CHANGES_FILE, "r", encoding="utf-8") as f:
                 return json.load(f)
-        except Exception:
-            pass
-    if GITHUB_TOKEN:
-        try:
-            url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/pending_changes.json"
-            headers = {"Authorization": f"Bearer {GITHUB_TOKEN}", "Accept": "application/vnd.github+json"}
-            r = requests.get(url, headers=headers, timeout=5)
-            if r.status_code == 200:
-                content = base64.b64decode(r.json()["content"]).decode("utf-8")
-                return json.loads(content)
         except Exception:
             pass
     return []
@@ -185,14 +200,33 @@ def get_pending_changes():
 def add_pending_change(desc):
     changes = get_pending_changes()
     changes.append({"desc": desc, "time": datetime.now().strftime("%H:%M:%S")})
-    try:
-        with open(PENDING_CHANGES_FILE, "w", encoding="utf-8") as f:
-            json.dump(changes, f, indent=2)
-    except Exception:
-        pass
+
+    if not IS_SERVERLESS:
+        try:
+            with open(PENDING_CHANGES_FILE, "w", encoding="utf-8") as f:
+                json.dump(changes, f, indent=2)
+        except Exception:
+            pass
+
+    if IS_SERVERLESS and GITHUB_TOKEN:
+        try:
+            url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/pending_changes.json"
+            headers = {"Authorization": f"Bearer {GITHUB_TOKEN}", "Accept": "application/vnd.github+json"}
+            r = requests.get(url, headers=headers, timeout=10)
+            sha = r.json().get("sha") if r.status_code == 200 else None
+            content_bytes = json.dumps(changes, indent=2).encode("utf-8")
+            payload = {
+                "message": f"Log pending change: {desc} [skip ci]",
+                "content": base64.b64encode(content_bytes).decode("utf-8")
+            }
+            if sha:
+                payload["sha"] = sha
+            requests.put(url, headers=headers, json=payload, timeout=10)
+        except Exception as e:
+            print(f"[BOT] GitHub API add_pending_change note: {e}")
 
 def clear_pending_changes():
-    if PENDING_CHANGES_FILE.exists():
+    if not IS_SERVERLESS and PENDING_CHANGES_FILE.exists():
         try:
             PENDING_CHANGES_FILE.unlink()
         except Exception:
@@ -201,7 +235,7 @@ def clear_pending_changes():
         try:
             url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/pending_changes.json"
             headers = {"Authorization": f"Bearer {GITHUB_TOKEN}", "Accept": "application/vnd.github+json"}
-            r = requests.get(url, headers=headers, timeout=5)
+            r = requests.get(url, headers=headers, timeout=10)
             if r.status_code == 200:
                 sha = r.json().get("sha")
                 payload = {
@@ -210,8 +244,8 @@ def clear_pending_changes():
                     "sha": sha
                 }
                 requests.put(url, headers=headers, json=payload, timeout=10)
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[BOT] GitHub API clear_pending_changes note: {e}")
 
 def calculate_experience(start_date_str):
     try:
@@ -228,13 +262,8 @@ def calculate_experience(start_date_str):
         return "N/A"
 
 def load_data():
-    if DATA_PATH.exists():
-        try:
-            with open(DATA_PATH, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception:
-            pass
-    if GITHUB_TOKEN:
+    # In serverless cloud (Vercel), read directly from GitHub API
+    if IS_SERVERLESS and GITHUB_TOKEN:
         try:
             url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/data.json"
             headers = {"Authorization": f"Bearer {GITHUB_TOKEN}", "Accept": "application/vnd.github+json"}
@@ -243,33 +272,32 @@ def load_data():
                 content = base64.b64decode(r.json()["content"]).decode("utf-8")
                 return json.loads(content)
         except Exception as e:
-            print(f"[BOT] GitHub API load note: {e}")
+            print(f"[BOT] GitHub API load_data note: {e}")
+
+    # Local mode fallback
+    if DATA_PATH.exists():
+        try:
+            with open(DATA_PATH, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+
     return {}
 
 def save_data_locally(data, description):
-    """Saves data.json, recompiles HTML, and logs as a pending change without pushing to GitHub."""
-    # 1. Save data.json locally if filesystem is writable
-    try:
-        with open(DATA_PATH, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
-        import sync
-        sync.sync()
-    except Exception as e:
-        print(f"[BOT] Local compile note: {e}")
+    """Saves data.json, recompiles HTML locally if on PC, or syncs to GitHub if in serverless cloud."""
+    # 1. Local filesystem save (if writable)
+    if not IS_SERVERLESS:
+        try:
+            with open(DATA_PATH, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+            import sync
+            sync.sync()
+        except Exception as e:
+            print(f"[BOT] Local compile note: {e}")
 
-    # 2. Track pending change
-    add_pending_change(description)
-
-    # 3. If in cloud environment without git, sync data.json to GitHub with [skip ci]
-    git_cmd = get_git_executable()
-    has_git = False
-    try:
-        res = subprocess.run([git_cmd, "--version"], capture_output=True, text=True)
-        has_git = (res.returncode == 0)
-    except Exception:
-        has_git = False
-
-    if not has_git and GITHUB_TOKEN:
+    # 2. Serverless Cloud: save directly to GitHub data.json with [skip ci]
+    if IS_SERVERLESS and GITHUB_TOKEN:
         try:
             url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/data.json"
             headers = {"Authorization": f"Bearer {GITHUB_TOKEN}", "Accept": "application/vnd.github+json"}
@@ -282,12 +310,38 @@ def save_data_locally(data, description):
             }
             if sha:
                 payload["sha"] = sha
-            requests.put(url, headers=headers, json=payload, timeout=15)
+            res = requests.put(url, headers=headers, json=payload, timeout=15)
+            if res.status_code not in [200, 201]:
+                print(f"[BOT] GitHub PUT data.json note: {res.status_code} {res.text}")
         except Exception as e:
             print(f"[BOT] GitHub cloud commit note: {e}")
 
+    # 3. Track pending change
+    add_pending_change(description)
+
 def push_pending_to_github(commit_msg):
-    """Commits and pushes all pending changes to GitHub."""
+    """Commits and pushes all pending changes to GitHub or triggers GitHub Actions."""
+    if IS_SERVERLESS:
+        if GITHUB_TOKEN:
+            try:
+                # Trigger workflow dispatch so GitHub Actions compiles HTML and deploys live
+                dispatch_url = f"https://api.github.com/repos/{GITHUB_REPO}/actions/workflows/sync.yml/dispatches"
+                headers = {
+                    "Authorization": f"Bearer {GITHUB_TOKEN}",
+                    "Accept": "application/vnd.github+json"
+                }
+                r = requests.post(dispatch_url, headers=headers, json={"ref": "main"}, timeout=10)
+                if r.status_code in [200, 204]:
+                    print("[BOT] Successfully dispatched sync.yml workflow")
+                    clear_pending_changes()
+                    return True
+                else:
+                    print(f"[BOT] Workflow dispatch note: {r.status_code} {r.text}")
+            except Exception as e:
+                print(f"[BOT] Workflow dispatch exception: {e}")
+        return False
+
+    # Local git execution
     git_cmd = get_git_executable()
     pushed = False
     try:
@@ -305,35 +359,8 @@ def push_pending_to_github(commit_msg):
     except Exception as e:
         print(f"[BOT] Git commit/push note: {e}")
 
-    # Fallback to GitHub REST API if git push didn't execute (e.g. Vercel serverless)
-    if GITHUB_TOKEN and not pushed:
-        try:
-            data = load_data()
-            url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/data.json"
-            headers = {
-                "Authorization": f"Bearer {GITHUB_TOKEN}",
-                "Accept": "application/vnd.github+json"
-            }
-            r = requests.get(url, headers=headers, timeout=10)
-            sha = r.json().get("sha") if r.status_code == 200 else None
-
-            content_bytes = json.dumps(data, indent=2, ensure_ascii=False).encode("utf-8")
-            # Do NOT use [skip ci] here so GitHub Actions triggers!
-            payload = {
-                "message": commit_msg,
-                "content": base64.b64encode(content_bytes).decode("utf-8")
-            }
-            if sha:
-                payload["sha"] = sha
-
-            requests.put(url, headers=headers, json=payload, timeout=15)
-            pushed = True
-
-            # Trigger workflow dispatch to ensure build runs immediately
-            dispatch_url = f"https://api.github.com/repos/{GITHUB_REPO}/actions/workflows/sync.yml/dispatches"
-            requests.post(dispatch_url, headers=headers, json={"ref": "main"}, timeout=10)
-        except Exception as e:
-            print(f"[BOT] GitHub API fallback note: {e}")
+    if pushed:
+        clear_pending_changes()
 
     return pushed
 
@@ -450,8 +477,9 @@ class TelegramBot:
             f"_You will receive a notification here as soon as deployment finishes._"
         )
 
-        # Watcher
-        threading.Thread(target=monitor_github_deployment, args=(self, chat_id, change_list_str), daemon=True).start()
+        # Watcher (local mode only; in serverless, GitHub Actions triggers the webhook callback directly)
+        if not IS_SERVERLESS:
+            threading.Thread(target=monitor_github_deployment, args=(self, chat_id, change_list_str), daemon=True).start()
 
     def send_message(self, chat_id, text, reply_markup=None):
         markup = reply_markup if reply_markup else DASHBOARD_REPLY_KEYBOARD
@@ -1419,7 +1447,7 @@ class TelegramBot:
             filename = doc.get("file_name", "")
             if filename.endswith(".json"):
                 self.send_message(chat_id, "📥 *Downloading and validating JSON file...*")
-                temp_path = BASE_DIR / "temp_data.json"
+                temp_path = Path("/tmp/temp_data.json") if IS_SERVERLESS else (BASE_DIR / "temp_data.json")
                 if self.download_file(doc["file_id"], temp_path):
                     try:
                         with open(temp_path, "r", encoding="utf-8") as f:
@@ -1462,7 +1490,17 @@ class TelegramBot:
         elif text == "🚀 Deploy All Changes" or text == "/deploy":
             self.deploy_pending_changes(chat_id)
         elif text == "📄 Download data.json" or text == "/get_data":
-            if DATA_PATH.exists():
+            d = load_data()
+            temp_file = Path("/tmp/data.json") if IS_SERVERLESS else DATA_PATH
+            if IS_SERVERLESS:
+                try:
+                    with open(temp_file, "w", encoding="utf-8") as f:
+                        json.dump(d, f, indent=2, ensure_ascii=False)
+                except Exception:
+                    pass
+            if temp_file.exists():
+                self.send_document(chat_id, temp_file, caption="📄 Current data.json configuration")
+            elif DATA_PATH.exists():
                 self.send_document(chat_id, DATA_PATH, caption="📄 Current data.json configuration")
         elif text == "📊 Live Status" or text == "/status":
             d = load_data()
