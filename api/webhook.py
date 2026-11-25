@@ -13,10 +13,16 @@ class handler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.end_headers()
+        bot_tok = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
+        gh_tok = os.environ.get("GITHUB_TOKEN", "").strip()
         data = {
             "status": "online",
             "bot": "Dinesh K Portfolio Bot (24/7 Cloud)",
-            "webhook_endpoint": "/api/webhook"
+            "webhook_endpoint": "/api/webhook",
+            "has_telegram_token": bool(bot_tok),
+            "has_github_token": bool(gh_tok),
+            "telegram_token_preview": (bot_tok[:8] + "...") if bot_tok else "MISSING",
+            "github_token_preview": (gh_tok[:8] + "...") if gh_tok else "MISSING"
         }
         self.wfile.write(json.dumps(data, indent=2).encode("utf-8"))
 
