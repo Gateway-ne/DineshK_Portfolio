@@ -46,3 +46,5 @@ class handler(BaseHTTPRequestHandler):
             "message": "Send Telegram updates to POST /api/webhook"
         }
         self.wfile.write(json.dumps(response).encode("utf-8"))
+
+app = handler
