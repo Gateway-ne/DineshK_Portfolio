@@ -36,3 +36,11 @@ jobs:
           git config --local user.name "github-actions[bot]"
           git add index.html resume.html
           git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-sync portfolio and resume from data.json [skip ci]" && git push)
+
+      - name: Notify Telegram on Deployment Complete
+        if: always()
+        run: |
+          STATUS="${{ job.status }}"
+          curl -s -X POST https://dineshk-portfolio.vercel.app/api/webhook \
+            -H "Content-Type: application/json" \
+            -d "{\"event\": \"deployment_completed\", \"status\": \"$STATUS\"}"

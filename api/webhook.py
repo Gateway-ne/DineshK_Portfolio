@@ -45,12 +45,28 @@ class handler(BaseHTTPRequestHandler):
             body = self.rfile.read(content_length).decode("utf-8")
             log(f"Received webhook POST: {body[:300]}")
             if body:
-                update = json.loads(body)
-                from bot import TelegramBot
+                payload = json.loads(body)
                 token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
+                from bot import TelegramBot
                 bot = TelegramBot(token)
-                bot.handle_update(update)
-                log("handle_update executed successfully")
+
+                if payload.get("event") == "deployment_completed":
+                    status = payload.get("status", "success")
+                    chat_id = os.environ.get("TELEGRAM_ALLOWED_USER_ID", "1253008391").strip()
+                    if status == "success":
+                        msg = (
+                            "🎉 *Deployment Succeeded!*\n\n"
+                            "All your updates are now live on GitHub Pages:\n\n"
+                            "🌐 [Open Live Portfolio](https://gateway-ne.github.io/DineshK_Portfolio/)\n"
+                            "📄 [Open Live Resume](https://gateway-ne.github.io/DineshK_Portfolio/resume.html)"
+                        )
+                    else:
+                        msg = "⚠️ *Deployment Failed on GitHub Actions.*\nPlease check GitHub repository Actions tab."
+                    bot.send_message(chat_id, msg)
+                    log(f"Deployment notification sent to {chat_id}: status={status}")
+                else:
+                    bot.handle_update(payload)
+                    log("handle_update executed successfully")
         except Exception as e:
             err = traceback.format_exc()
             log(f"POST ERROR: {err}")
