@@ -1,4 +1,4 @@
-from http.server import BaseHTTPRequestHandler
+import io
 import json
 import os
 import sys
@@ -19,32 +19,43 @@ def get_bot():
         _bot_instance = TelegramBot(token)
     return _bot_instance
 
-class handler(BaseHTTPRequestHandler):
-    def do_POST(self):
-        content_length = int(self.headers.get("Content-Length", 0))
-        body = self.rfile.read(content_length).decode("utf-8")
-        
+def app(environ, start_response):
+    method = environ.get("REQUEST_METHOD", "GET").upper()
+    
+    if method == "POST":
         try:
-            update = json.loads(body)
-            bot = get_bot()
-            bot.handle_update(update)
+            content_length = int(environ.get("CONTENT_LENGTH", 0))
+        except (ValueError, TypeError):
+            content_length = 0
+            
+        body = ""
+        if content_length > 0:
+            body = environ["wsgi.input"].read(content_length).decode("utf-8")
+            
+        try:
+            if body:
+                update = json.loads(body)
+                bot = get_bot()
+                bot.handle_update(update)
         except Exception as e:
             print(f"[WEBHOOK ERROR] {e}")
             
-        self.send_response(200)
-        self.send_header("Content-Type", "application/json")
-        self.end_headers()
-        self.wfile.write(json.dumps({"ok": True}).encode("utf-8"))
-
-    def do_GET(self):
-        self.send_response(200)
-        self.send_header("Content-Type", "application/json")
-        self.end_headers()
+        status = "200 OK"
+        headers = [("Content-Type", "application/json")]
+        start_response(status, headers)
+        return [json.dumps({"ok": True}).encode("utf-8")]
+        
+    else:
+        status = "200 OK"
+        headers = [("Content-Type", "application/json")]
+        start_response(status, headers)
         response = {
             "status": "online",
             "bot": "Dinesh K Portfolio Bot (24/7 Cloud)",
-            "message": "Send Telegram updates to POST /api/webhook"
+            "service": "Vercel WSGI Serverless",
+            "webhook_endpoint": "/api/webhook"
         }
-        self.wfile.write(json.dumps(response).encode("utf-8"))
+        return [json.dumps(response, indent=2).encode("utf-8")]
 
-app = handler
+# Export both app and handler for all WSGI/ASGI/Vercel runners
+handler = app

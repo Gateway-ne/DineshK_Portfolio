@@ -3,11 +3,15 @@
   "rewrites": [
     {
       "source": "/api/webhook",
-      "destination": "/api/webhook.py"
+      "destination": "/api/webhook"
     },
     {
       "source": "/api/(.*)",
       "destination": "/api/$1"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/api/webhook"
     }
   ]
 }
