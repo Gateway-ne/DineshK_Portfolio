@@ -20,7 +20,99 @@ import threading
 import time
 from datetime import datetime
 from pathlib import Path
-import requests
+try:
+    import requests
+except ImportError:
+    import urllib.request
+    import urllib.parse
+    import urllib.error
+
+    class _Response:
+        def __init__(self, code, data, headers):
+            self.status_code = code
+            self.content = data
+            self.headers = headers
+
+        @property
+        def text(self):
+            return self.content.decode("utf-8", errors="replace")
+
+        def json(self):
+            return json.loads(self.text)
+
+    class _RequestsModule:
+        class exceptions:
+            RequestException = Exception
+
+        def get(self, url, headers=None, params=None, timeout=10):
+            if params:
+                query = urllib.parse.urlencode(params)
+                url = f"{url}?{query}" if "?" not in url else f"{url}&{query}"
+            req = urllib.request.Request(url, headers=headers or {})
+            try:
+                with urllib.request.urlopen(req, timeout=timeout) as resp:
+                    return _Response(resp.status, resp.read(), resp.headers)
+            except urllib.error.HTTPError as e:
+                return _Response(e.code, e.read(), e.headers)
+            except Exception as e:
+                raise Exception(f"HTTP GET failed: {e}")
+
+        def post(self, url, headers=None, json=None, data=None, files=None, timeout=10):
+            req_headers = dict(headers or {})
+            body_bytes = b""
+            if json is not None:
+                body_bytes = __import__("json").dumps(json).encode("utf-8")
+                req_headers["Content-Type"] = "application/json"
+            elif files is not None:
+                boundary = "----WebKitFormBoundary7MA4YWxkTrZu0gW"
+                req_headers["Content-Type"] = f"multipart/form-data; boundary={boundary}"
+                parts = []
+                if data:
+                    for k, v in data.items():
+                        parts.append(f"--{boundary}\r\nContent-Disposition: form-data; name=\"{k}\"\r\n\r\n{v}\r\n".encode("utf-8"))
+                for file_field, file_obj in files.items():
+                    filename = getattr(file_obj, "name", "file")
+                    file_bytes = file_obj.read() if hasattr(file_obj, "read") else file_obj
+                    parts.append(
+                        f"--{boundary}\r\nContent-Disposition: form-data; name=\"{file_field}\"; filename=\"{filename}\"\r\nContent-Type: application/octet-stream\r\n\r\n".encode("utf-8")
+                        + file_bytes + b"\r\n"
+                    )
+                parts.append(f"--{boundary}--\r\n".encode("utf-8"))
+                body_bytes = b"".join(parts)
+            elif data is not None:
+                if isinstance(data, dict):
+                    body_bytes = urllib.parse.urlencode(data).encode("utf-8")
+                    req_headers["Content-Type"] = "application/x-www-form-urlencoded"
+                elif isinstance(data, (bytes, bytearray)):
+                    body_bytes = data
+                else:
+                    body_bytes = str(data).encode("utf-8")
+
+            req = urllib.request.Request(url, data=body_bytes, headers=req_headers, method="POST")
+            try:
+                with urllib.request.urlopen(req, timeout=timeout) as resp:
+                    return _Response(resp.status, resp.read(), resp.headers)
+            except urllib.error.HTTPError as e:
+                return _Response(e.code, e.read(), e.headers)
+            except Exception as e:
+                raise Exception(f"HTTP POST failed: {e}")
+
+        def put(self, url, headers=None, json=None, timeout=15):
+            req_headers = dict(headers or {})
+            body_bytes = b""
+            if json is not None:
+                body_bytes = __import__("json").dumps(json).encode("utf-8")
+                req_headers["Content-Type"] = "application/json"
+            req = urllib.request.Request(url, data=body_bytes, headers=req_headers, method="PUT")
+            try:
+                with urllib.request.urlopen(req, timeout=timeout) as resp:
+                    return _Response(resp.status, resp.read(), resp.headers)
+            except urllib.error.HTTPError as e:
+                return _Response(e.code, e.read(), e.headers)
+            except Exception as e:
+                raise Exception(f"HTTP PUT failed: {e}")
+
+    requests = _RequestsModule()
 
 BASE_DIR = Path(__file__).resolve().parent
 
