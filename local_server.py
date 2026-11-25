@@ -79,9 +79,5 @@ def run_server():
         print("\n[SERVER] Shutting down...")
         httpd.server_close()
 
-# Export handler for Vercel/serverless environments
-handler = PortfolioRequestHandler
-app = PortfolioRequestHandler
-
 if __name__ == "__main__":
     run_server()
