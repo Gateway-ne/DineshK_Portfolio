@@ -95,10 +95,6 @@
       {
         "name": "Change Management",
         "icon": "CM"
-      },
-      {
-        "name": "Test",
-        "icon": "TES"
       }
     ],
     "integration": [
