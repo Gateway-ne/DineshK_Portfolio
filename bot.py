@@ -77,19 +77,47 @@ def get_pending_changes():
             with open(PENDING_CHANGES_FILE, "r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception:
-            return []
+            pass
+    if GITHUB_TOKEN:
+        try:
+            url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/pending_changes.json"
+            headers = {"Authorization": f"Bearer {GITHUB_TOKEN}", "Accept": "application/vnd.github+json"}
+            r = requests.get(url, headers=headers, timeout=5)
+            if r.status_code == 200:
+                content = base64.b64decode(r.json()["content"]).decode("utf-8")
+                return json.loads(content)
+        except Exception:
+            pass
     return []
 
 def add_pending_change(desc):
     changes = get_pending_changes()
     changes.append({"desc": desc, "time": datetime.now().strftime("%H:%M:%S")})
-    with open(PENDING_CHANGES_FILE, "w", encoding="utf-8") as f:
-        json.dump(changes, f, indent=2)
+    try:
+        with open(PENDING_CHANGES_FILE, "w", encoding="utf-8") as f:
+            json.dump(changes, f, indent=2)
+    except Exception:
+        pass
 
 def clear_pending_changes():
     if PENDING_CHANGES_FILE.exists():
         try:
             PENDING_CHANGES_FILE.unlink()
+        except Exception:
+            pass
+    if GITHUB_TOKEN:
+        try:
+            url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/pending_changes.json"
+            headers = {"Authorization": f"Bearer {GITHUB_TOKEN}", "Accept": "application/vnd.github+json"}
+            r = requests.get(url, headers=headers, timeout=5)
+            if r.status_code == 200:
+                sha = r.json().get("sha")
+                payload = {
+                    "message": "Clear pending changes [skip ci]",
+                    "content": base64.b64encode(b"[]").decode("utf-8"),
+                    "sha": sha
+                }
+                requests.put(url, headers=headers, json=payload, timeout=10)
         except Exception:
             pass
 
@@ -108,21 +136,63 @@ def calculate_experience(start_date_str):
         return "N/A"
 
 def load_data():
-    with open(DATA_PATH, "r", encoding="utf-8") as f:
-        return json.load(f)
+    if DATA_PATH.exists():
+        try:
+            with open(DATA_PATH, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    if GITHUB_TOKEN:
+        try:
+            url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/data.json"
+            headers = {"Authorization": f"Bearer {GITHUB_TOKEN}", "Accept": "application/vnd.github+json"}
+            r = requests.get(url, headers=headers, timeout=10)
+            if r.status_code == 200:
+                content = base64.b64decode(r.json()["content"]).decode("utf-8")
+                return json.loads(content)
+        except Exception as e:
+            print(f"[BOT] GitHub API load note: {e}")
+    return {}
 
 def save_data_locally(data, description):
     """Saves data.json, recompiles HTML, and logs as a pending change without pushing to GitHub."""
-    # 1. Save data.json locally
-    with open(DATA_PATH, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
-    
-    # 2. Re-compile index.html and resume.html
-    import sync
-    sync.sync()
+    # 1. Save data.json locally if filesystem is writable
+    try:
+        with open(DATA_PATH, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+        import sync
+        sync.sync()
+    except Exception as e:
+        print(f"[BOT] Local compile note: {e}")
 
-    # 3. Track pending change
+    # 2. Track pending change
     add_pending_change(description)
+
+    # 3. If in cloud environment without git, sync data.json to GitHub with [skip ci]
+    git_cmd = get_git_executable()
+    has_git = False
+    try:
+        res = subprocess.run([git_cmd, "--version"], capture_output=True, text=True)
+        has_git = (res.returncode == 0)
+    except Exception:
+        has_git = False
+
+    if not has_git and GITHUB_TOKEN:
+        try:
+            url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/data.json"
+            headers = {"Authorization": f"Bearer {GITHUB_TOKEN}", "Accept": "application/vnd.github+json"}
+            r = requests.get(url, headers=headers, timeout=10)
+            sha = r.json().get("sha") if r.status_code == 200 else None
+            content_bytes = json.dumps(data, indent=2, ensure_ascii=False).encode("utf-8")
+            payload = {
+                "message": f"Update data.json: {description} [skip ci]",
+                "content": base64.b64encode(content_bytes).decode("utf-8")
+            }
+            if sha:
+                payload["sha"] = sha
+            requests.put(url, headers=headers, json=payload, timeout=15)
+        except Exception as e:
+            print(f"[BOT] GitHub cloud commit note: {e}")
 
 def push_pending_to_github(commit_msg):
     """Commits and pushes all pending changes to GitHub."""
@@ -143,7 +213,7 @@ def push_pending_to_github(commit_msg):
     except Exception as e:
         print(f"[BOT] Git commit/push note: {e}")
 
-    # Fallback to GitHub REST API if git push didn't execute
+    # Fallback to GitHub REST API if git push didn't execute (e.g. Vercel serverless)
     if GITHUB_TOKEN and not pushed:
         try:
             data = load_data()
@@ -156,8 +226,9 @@ def push_pending_to_github(commit_msg):
             sha = r.json().get("sha") if r.status_code == 200 else None
 
             content_bytes = json.dumps(data, indent=2, ensure_ascii=False).encode("utf-8")
+            # Do NOT use [skip ci] here so GitHub Actions triggers!
             payload = {
-                "message": f"{commit_msg} [skip ci]",
+                "message": commit_msg,
                 "content": base64.b64encode(content_bytes).decode("utf-8")
             }
             if sha:
@@ -165,6 +236,10 @@ def push_pending_to_github(commit_msg):
 
             requests.put(url, headers=headers, json=payload, timeout=15)
             pushed = True
+
+            # Trigger workflow dispatch to ensure build runs immediately
+            dispatch_url = f"https://api.github.com/repos/{GITHUB_REPO}/actions/workflows/sync.yml/dispatches"
+            requests.post(dispatch_url, headers=headers, json={"ref": "main"}, timeout=10)
         except Exception as e:
             print(f"[BOT] GitHub API fallback note: {e}")
 
@@ -1306,6 +1381,28 @@ class TelegramBot:
                 f"{p_text}\n\n"
                 f"🌐 https://gateway-ne.github.io/DineshK_Portfolio/"
             )
+        elif text.startswith("/set_webhook"):
+            parts = text.split(maxsplit=1)
+            if len(parts) > 1:
+                wh_url = parts[1].strip()
+                r = requests.post(f"{self.api_url}/setWebhook", json={"url": wh_url}).json()
+                if r.get("ok"):
+                    self.send_message(chat_id, f"✅ *Webhook Activated!*\n\nAll Telegram updates are now sent 24/7 to:\n`{wh_url}`")
+                else:
+                    self.send_message(chat_id, f"❌ *Error setting webhook:* {r.get('description')}")
+            else:
+                self.send_message(chat_id, "ℹ️ *Usage:* `/set_webhook https://your-project.vercel.app/api/webhook`")
+        elif text == "/delete_webhook":
+            r = requests.post(f"{self.api_url}/deleteWebhook").json()
+            if r.get("ok"):
+                self.send_message(chat_id, "✅ *Webhook Deleted!*\n\nThe bot is now back in polling mode.")
+            else:
+                self.send_message(chat_id, f"❌ *Error deleting webhook:* {r.get('description')}")
+        elif text == "/webhook_info":
+            r = requests.get(f"{self.api_url}/getWebhookInfo").json()
+            wh = r.get("result", {})
+            url = wh.get("url") or "None (Polling Mode)"
+            self.send_message(chat_id, f"ℹ️ *Webhook Status:*\n\n• *URL:* `{url}`\n• *Pending Updates:* `{wh.get('pending_update_count', 0)}`")
         elif text == "📋 Main Dashboard" or text == "/menu" or text == "/start":
             self.show_main_menu(chat_id)
         else:
@@ -1338,7 +1435,32 @@ class TelegramBot:
                 print(f"[BOT] Polling error: {e}")
                 time.sleep(2)
 
+def start_render_health_server():
+    """Starts a lightweight HTTP server on $PORT for Render health checks if configured."""
+    port_env = os.environ.get("PORT")
+    if not port_env:
+        return
+    try:
+        from http.server import HTTPServer, BaseHTTPRequestHandler
+        class HealthHandler(BaseHTTPRequestHandler):
+            def do_GET(self):
+                self.send_response(200)
+                self.send_header("Content-Type", "text/plain")
+                self.end_headers()
+                self.wfile.write(b"Dinesh K Portfolio Bot - Running 24/7 OK")
+            def log_message(self, format, *args):
+                pass
+        port = int(port_env)
+        server = HTTPServer(("0.0.0.0", port), HealthHandler)
+        t = threading.Thread(target=server.serve_forever, daemon=True)
+        t.start()
+        print(f"[BOT] Render Health Check server running on port {port}")
+    except Exception as e:
+        print(f"[BOT] Render Health server note: {e}")
+
 def ensure_single_instance(port=58921):
+    if os.environ.get("PORT") or os.environ.get("VERCEL"):
+        return None
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.bind(("127.0.0.1", port))
@@ -1349,6 +1471,7 @@ def ensure_single_instance(port=58921):
         sys.exit(0)
 
 if __name__ == "__main__":
+    start_render_health_server()
     lock_socket = ensure_single_instance()
     if not TELEGRAM_BOT_TOKEN:
         print("ERROR: TELEGRAM_BOT_TOKEN is not set in .env")
