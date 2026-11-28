@@ -227,6 +227,10 @@
       {
         "name": "TestCase Design",
         "icon": "TES"
+      },
+      {
+        "name": "Test",
+        "icon": "TES"
       }
     ]
   },
